@@ -19,10 +19,11 @@
     <description>Production-ready Finance and Banking System with JWT Auth, RBAC, Maker-Checker Workflow, and Banking Modules</description>
 
     <properties>
+        <lombok.version>1.18.38</lombok.version>
         <java.version>21</java.version>
         <!-- JWT library version -->
         <jjwt.version>0.12.5</jjwt.version>
-        <lombok.version>1.18.48</lombok.version>
+        <lombok.version>1.18.34</lombok.version>
     </properties>
 
     <dependencies>
@@ -114,7 +115,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
+            
             <optional>true</optional>
         </dependency>
 
@@ -168,7 +169,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
+                            
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

@@ -94,7 +94,7 @@ public class SecurityConfig {
                 // PUBLIC ENDPOINTS — No authentication required
                 // Anyone can hit these URLs (login page, health check, Swagger)
                 .requestMatchers(
-                    "/api/auth/**",           // Login, register, refresh token
+                    "/api/v1/auth/**", "/api/auth/**", "/api/v1/upi/**", "/api/upi/**",           // Login, register, refresh token
                     "/swagger-ui/**",         // Swagger UI HTML/CSS/JS
                     "/swagger-ui.html",       // Swagger UI main page
                     "/v3/api-docs/**",        // OpenAPI JSON spec
@@ -133,9 +133,7 @@ public class SecurityConfig {
                     .hasAnyRole("COMPLIANCE_OFFICER", "AML_SANCTIONS_REVIEWER",
                                 "RISK_OFFICER", "BANK_AUDITOR", "BANK_SUPER_ADMIN")
 
-                // LLM endpoints — Internal use only
-                .requestMatchers("/api/llm/**")
-                    .hasAnyRole("BANK_SUPER_ADMIN", "RISK_OFFICER", "COMPLIANCE_OFFICER", "AML_SANCTIONS_REVIEWER")
+                // LLM endpoints open to all authenticated users for chatbot
 
                 // ALL OTHER ENDPOINTS — Must be authenticated (any valid JWT)
                 .anyRequest().authenticated()

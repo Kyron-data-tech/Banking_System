@@ -52,7 +52,7 @@ public class MakerCheckerController {
      * @PreAuthorize — Only users with CHECKER or ADMIN roles can see pending requests
      */
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', " +
+    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', 'PAYMENT_OPERATIONS', 'COMPLIANCE_OFFICER', 'AML_SANCTIONS_REVIEWER', 'RISK_OFFICER', " +
                              "'CORP_ADMIN', 'CORP_CHECKER', 'CORP_APPROVER_L1', " +
                              "'CORP_APPROVER_L2', 'CORP_FINAL_AUTHORIZER')")
     @Operation(summary = "Get pending requests",
@@ -101,7 +101,7 @@ public class MakerCheckerController {
      * ENFORCED: Checker cannot approve their own request (handled in service).
      */
     @PostMapping("/{requestId}/approve")
-    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', " +
+    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', 'PAYMENT_OPERATIONS', 'COMPLIANCE_OFFICER', 'AML_SANCTIONS_REVIEWER', 'RISK_OFFICER', " +
                              "'CORP_CHECKER', 'CORP_APPROVER_L1', " +
                              "'CORP_APPROVER_L2', 'CORP_FINAL_AUTHORIZER', 'CORP_ADMIN')")
     @Operation(
@@ -137,7 +137,7 @@ public class MakerCheckerController {
      * rejectionReason is MANDATORY on rejection.
      */
     @PostMapping("/{requestId}/reject")
-    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', " +
+    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', 'PAYMENT_OPERATIONS', 'COMPLIANCE_OFFICER', 'AML_SANCTIONS_REVIEWER', 'RISK_OFFICER', " +
                              "'CORP_CHECKER', 'CORP_APPROVER_L1', " +
                              "'CORP_APPROVER_L2', 'CORP_FINAL_AUTHORIZER', 'CORP_ADMIN')")
     @Operation(

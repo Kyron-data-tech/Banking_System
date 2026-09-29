@@ -12,6 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -41,39 +43,32 @@ public class BankingSystemApplication {
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
-            // Define the users to seed: email, fullName, role
-            Object[][] users = {
-                {"admin@kyrobank.com",       "Super Admin",           RoleType.BANK_SUPER_ADMIN},
-                {"ops@kyrobank.com",         "Payment Ops Manager",   RoleType.PAYMENT_OPERATIONS},
-                {"compliance@kyrobank.com",  "Compliance Officer",    RoleType.COMPLIANCE_OFFICER},
-                {"aml@kyrobank.com",         "AML Reviewer",          RoleType.AML_SANCTIONS_REVIEWER},
-                {"maker@kyrobank.com",       "Corporate Maker",       RoleType.CORP_MAKER},
-                {"checker@kyrobank.com",     "Corporate Checker",     RoleType.CORP_CHECKER},
-                {"approver@kyrobank.com",    "Corporate Approver",    RoleType.CORP_APPROVER_L1},
-                {"corpadmin@kyrobank.com",   "Corporate Admin",       RoleType.CORP_ADMIN},
-            };
+            // 1. Seed Roles
+            Map<RoleType, Role> roles = new HashMap<>();
+            for (RoleType roleType : RoleType.values()) {
+                Role role = roleRepository.findByRoleType(roleType)
+                    .orElseGet(() -> {
+                        Role newRole = new Role();
+                        newRole.setRoleType(roleType);
+                        return roleRepository.save(newRole);
+                    });
+                roles.put(roleType, role);
+            }
 
-            for (Object[] u : users) {
-                String email    = (String) u[0];
-                String name     = (String) u[1];
-                RoleType roleType = (RoleType) u[2];
-
+            // 2. Seed Users for ALL 30+ ROLES
+            for (RoleType roleType : RoleType.values()) {
+                String prefix = roleType.name().toLowerCase().replace("role_", "").replace("_", "");
+                String email = prefix.equals("banksuperadmin") ? "admin@kyrobank.com" : prefix + "@kyrobank.com";
+                
                 if (userRepository.findByEmail(email).isEmpty()) {
-                    Role role = roleRepository.findByRoleType(roleType)
-                        .orElseGet(() -> {
-                            Role r = new Role();
-                            r.setRoleType(roleType);
-                            return roleRepository.save(r);
-                        });
-
                     User user = new User();
                     user.setEmail(email);
+                    user.setFullName(roleType.name().replace("_", " "));
                     user.setPassword(passwordEncoder.encode("password123"));
-                    user.setFullName(name);
-                    user.setRoles(Set.of(role));
                     user.setStatus(UserStatus.ACTIVE);
+                    user.getRoles().add(roles.get(roleType));
                     userRepository.save(user);
-                    System.out.println("✅ SEEDED: " + email + " [" + roleType + "]");
+                    System.out.println("SEEDED DEMO USER: " + email + " [" + roleType + "]");
                 }
             }
         };

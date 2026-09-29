@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import { authApi } from '../api';
 
 export interface AuthUser {
   id: string;
@@ -10,7 +11,7 @@ export interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
-  login: (data: any) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   hasRole: (role: string) => boolean;
@@ -30,7 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (stored && token) setUser(JSON.parse(stored));
   }, []);
 
-  const login = (data: any) => {
+  const login = async (email: string, password: string) => {
+    const { data } = await authApi.login(email, password);
     localStorage.setItem('accessToken', data.accessToken);
     if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
     const userData: AuthUser = {

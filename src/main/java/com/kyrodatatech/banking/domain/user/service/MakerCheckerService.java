@@ -1,6 +1,7 @@
 package com.kyrodatatech.banking.domain.user.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kyrodatatech.banking.domain.audit.service.AuditLogService;
 import com.kyrodatatech.banking.domain.user.entity.MakerCheckerRequest;
 import com.kyrodatatech.banking.domain.user.entity.User;
 import com.kyrodatatech.banking.domain.user.enums.ApprovalStatus;
@@ -22,42 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-/**
- * ================================================================
- * MakerCheckerService — The Approval Workflow Business Logic
- * ================================================================
- *
- * This service orchestrates the entire Maker-Checker (4-eyes principle) workflow.
- *
- * WORKFLOW OVERVIEW:
- * ─────────────────────────────────────────────────────────────
- *
- * [MAKER creates a request]
- *    ↓
- * MakerCheckerRequest saved with status = PENDING
- *    ↓
- * [CHECKER reviews all PENDING requests]
- *    ↓
- * CHECKER approves → executeApprovedAction()
- *       OR
- * CHECKER rejects → save rejection reason
- *    ↓
- * If approved: User.status = ACTIVE (user can login!)
- *
- * ─────────────────────────────────────────────────────────────
- *
- * SECURITY RULES ENFORCED HERE:
- * 1. A MAKER cannot approve their OWN request (self-approval = fraud risk)
- * 2. Only PENDING requests can be approved/rejected
- * 3. Only CHECKER role users can approve requests
- * 4. Expired requests cannot be approved
- *
- * @Service — Spring business logic layer
- * @Transactional — All operations run in a database transaction
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -67,161 +34,120 @@ public class MakerCheckerService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final TransactionService transactionService;
-    private final ObjectMapper objectMapper; // For parsing JSON payloads
+    private final AuditLogService auditLogService;
+    private final ObjectMapper objectMapper;
 
-    // ─────────────────────────────────────────────────────────────
-    // MAKER ACTIONS — Creating Requests
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Creates a new Maker-Checker approval request for user creation.
-     *
-     * Called when a BANK_USER_ADMIN (Maker) wants to create a new bank user.
-     * The new user is created with PENDING_APPROVAL status and cannot login
-     * until a CHECKER approves this request.
-     *
-     * @param newUser  The User entity to be created (in PENDING_APPROVAL status)
-     * @param makerId  UUID of the admin making this request
-     * @param makerName Full name of the maker
-     * @return The created MakerCheckerRequest
-     */
     @Transactional
-    public MakerCheckerRequest createUserRequest(User newUser, UUID makerId, String makerName) {
+    public MakerCheckerRequest createRequest(String actionType, UUID entityId,
+                                             UUID makerId, String makerName,
+                                             Object requestPayload, String internalRemarks) {
+        String payloadJson = null;
         try {
-            // Serialize the user object to JSON for storage in the request payload
-            // This preserves all the data needed to create the user upon approval
-            String payload = objectMapper.writeValueAsString(Map.of(
-                    "userId", newUser.getId().toString(),
-                    "fullName", newUser.getFullName(),
-                    "email", newUser.getEmail(),
-                    "employeeId", newUser.getEmployeeId() != null ? newUser.getEmployeeId() : "",
-                    "roles", newUser.getRoles().stream()
-                            .map(role -> role.getRoleType().name())
-                            .toList()
-            ));
-
-            MakerCheckerRequest request = MakerCheckerRequest.builder()
-                    .actionType("CREATE_USER")
-                    .requestPayload(payload)
-                    .makerId(makerId)
-                    .makerName(makerName)
-                    .entityId(newUser.getId())
-                    .entityType("USER")
-                    .status(ApprovalStatus.PENDING)
-                    .priority("MEDIUM")
-                    .build();
-
-            MakerCheckerRequest savedRequest = makerCheckerRepository.save(request);
-            log.info("Maker-Checker request created: {} | Maker: {} | User: {}",
-                    savedRequest.getId(), makerName, newUser.getEmail());
-
-            return savedRequest;
-
+            if (requestPayload != null) {
+                payloadJson = requestPayload instanceof String 
+                        ? (String) requestPayload 
+                        : objectMapper.writeValueAsString(requestPayload);
+            }
         } catch (Exception e) {
-            throw new AppException("Failed to create approval request: " + e.getMessage(),
-                    HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("Failed to serialize maker-checker payload", e);
+            payloadJson = "{}";
         }
+
+        MakerCheckerRequest request = MakerCheckerRequest.builder()
+                .actionType(actionType)
+                .entityId(entityId)
+                .makerId(makerId)
+                .makerName(makerName)
+                .status(ApprovalStatus.PENDING_CHECKER)
+                .requestPayload(payloadJson)
+                
+                .build();
+
+        return makerCheckerRepository.save(request);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // CHECKER ACTIONS — Approving or Rejecting
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * APPROVE a pending Maker-Checker request.
-     *
-     * Called by a CHECKER user to approve a pending request.
-     * After approval, the target action is executed (user activated, payment sent).
-     *
-     * SECURITY CHECKS:
-     * - Cannot approve your own request
-     * - Request must be in PENDING status
-     * - Request must not be expired
-     *
-     * @param requestId  UUID of the MakerCheckerRequest to approve
-     * @param checkerId  UUID of the CHECKER user approving it
-     * @param checkerName Full name of the checker
-     * @param comments   Optional comments from the checker
-     * @return Updated MakerCheckerRequest with APPROVED status
-     */
     @Transactional
-    public MakerCheckerRequest approve(UUID requestId, UUID checkerId,
-                                       String checkerName, String comments) {
-        // Load the request
+    public MakerCheckerRequest approve(UUID requestId, UUID checkerId, String checkerName, String comments) {
         MakerCheckerRequest request = getRequestOrThrow(requestId);
 
-        // ---- SECURITY: Self-approval prevention ----
-        // A maker CANNOT approve their own request. This is the "4-eyes principle".
         if (request.getMakerId().equals(checkerId)) {
-            throw new AppException(
-                    "Self-approval is not allowed. A different user must approve this request.",
-                    HttpStatus.FORBIDDEN
-            );
+            auditLogService.logAction("SELF_APPROVAL_BLOCKED", requestId.toString(), checkerName, null, "Maker attempted to self-approve");
+            throw new AppException("A maker cannot approve their own request. Strictly prohibited.", HttpStatus.FORBIDDEN);
         }
 
-        // ---- VALIDATION: Only PENDING requests can be approved ----
-        if (request.getStatus() != ApprovalStatus.PENDING) {
-            throw new AppException(
-                    "Request is not in PENDING status. Current status: " + request.getStatus(),
-                    HttpStatus.BAD_REQUEST
-            );
-        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean isChecker = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_CHECKER"));
+        boolean isL1 = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_APPROVER_L1"));
+        boolean isL2 = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_APPROVER_L2"));
+        boolean isFinal = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_FINAL_AUTHORIZER"));
+        boolean isSuperAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_BANK_SUPER_ADMIN"));
 
-        // ---- VALIDATION: Check if request has expired ----
-        if (LocalDateTime.now().isAfter(request.getExpiresAt())) {
-            request.setStatus(ApprovalStatus.REJECTED);
-            request.setRejectionReason("Request expired automatically");
-            makerCheckerRepository.save(request);
-            throw new AppException("This approval request has expired.", HttpStatus.BAD_REQUEST);
-        }
-
-        // ---- UPDATE: Mark request as APPROVED ----
-        request.setStatus(ApprovalStatus.APPROVED);
         request.setCheckerId(checkerId);
         request.setCheckerName(checkerName);
         request.setCheckerComments(comments);
         request.setActionedAt(LocalDateTime.now());
 
-        // ---- EXECUTE: Perform the actual action ----
-        executeApprovedAction(request);
+        if ("INITIATE_PAYMENT".equals(request.getActionType())) {
+            Transaction transaction = transactionRepository.findById(request.getEntityId())
+                .orElseThrow(() -> new AppException("Transaction not found", HttpStatus.NOT_FOUND));
 
-        MakerCheckerRequest savedRequest = makerCheckerRepository.save(request);
-        log.info("Request {} APPROVED by checker: {} | Action: {}",
-                requestId, checkerName, request.getActionType());
+            double amount = transaction.getAmount().doubleValue();
 
-        return savedRequest;
-    }
-
-    /**
-     * REJECT a pending Maker-Checker request.
-     *
-     * Called by a CHECKER user to reject a request.
-     * The maker is notified with the rejection reason.
-     *
-     * @param requestId       UUID of the request to reject
-     * @param checkerId       UUID of the checker
-     * @param checkerName     Name of the checker
-     * @param rejectionReason WHY was this rejected? (required)
-     * @return Updated MakerCheckerRequest with REJECTED status
-     */
-    @Transactional
-    public MakerCheckerRequest reject(UUID requestId, UUID checkerId,
-                                      String checkerName, String rejectionReason) {
-        MakerCheckerRequest request = getRequestOrThrow(requestId);
-
-        // Self-rejection is also not allowed (consistency)
-        if (request.getMakerId().equals(checkerId)) {
-            throw new AppException(
-                    "A maker cannot reject their own request.",
-                    HttpStatus.FORBIDDEN
-            );
+            if (request.getStatus() == ApprovalStatus.PENDING_CHECKER) {
+                if (!isChecker && !isSuperAdmin) throw new AppException("Only CHECKER can approve this tier.", HttpStatus.FORBIDDEN);
+                if (amount > 100000) {
+                    request.setStatus(ApprovalStatus.PENDING_L1);
+                    transaction.setStatus(TransactionStatus.PENDING_L1);
+                    auditLogService.logAction("TRANSACTION_APPROVED", transaction.getId().toString(), checkerName, "CHECKER", "Forwarded to L1");
+                } else {
+                    request.setStatus(ApprovalStatus.APPROVED);
+                    transaction.setStatus(TransactionStatus.APPROVED);
+                    transactionService.processApprovedTransaction(transaction.getId());
+                    auditLogService.logAction("TRANSACTION_APPROVED", transaction.getId().toString(), checkerName, "CHECKER", "Fully Approved");
+                }
+            } else if (request.getStatus() == ApprovalStatus.PENDING_L1) {
+                if (!isL1 && !isSuperAdmin) throw new AppException("Only APPROVER_L1 can approve this tier.", HttpStatus.FORBIDDEN);
+                request.setStatus(ApprovalStatus.PENDING_L2);
+                transaction.setStatus(TransactionStatus.PENDING_L2);
+                auditLogService.logAction("TRANSACTION_APPROVED", transaction.getId().toString(), checkerName, "L1", "Forwarded to L2");
+            } else if (request.getStatus() == ApprovalStatus.PENDING_L2) {
+                if (!isL2 && !isSuperAdmin) throw new AppException("Only APPROVER_L2 can approve this tier.", HttpStatus.FORBIDDEN);
+                if (amount > 1000000) {
+                    request.setStatus(ApprovalStatus.PENDING_FINAL_AUTHORIZATION);
+                    transaction.setStatus(TransactionStatus.PENDING_FINAL_AUTHORIZATION);
+                    auditLogService.logAction("TRANSACTION_APPROVED", transaction.getId().toString(), checkerName, "L2", "Forwarded to FINAL");
+                } else {
+                    request.setStatus(ApprovalStatus.APPROVED);
+                    transaction.setStatus(TransactionStatus.APPROVED);
+                    transactionService.processApprovedTransaction(transaction.getId());
+                    auditLogService.logAction("TRANSACTION_APPROVED", transaction.getId().toString(), checkerName, "L2", "Fully Approved");
+                }
+            } else if (request.getStatus() == ApprovalStatus.PENDING_FINAL_AUTHORIZATION) {
+                if (!isFinal && !isSuperAdmin) throw new AppException("Only FINAL_AUTHORIZER can approve this tier.", HttpStatus.FORBIDDEN);
+                request.setStatus(ApprovalStatus.APPROVED);
+                transaction.setStatus(TransactionStatus.APPROVED);
+                transactionService.processApprovedTransaction(transaction.getId());
+                auditLogService.logAction("TRANSACTION_APPROVED", transaction.getId().toString(), checkerName, "FINAL", "Fully Approved");
+            } else {
+                throw new AppException("Invalid state for approval.", HttpStatus.BAD_REQUEST);
+            }
+            transactionRepository.save(transaction);
+        } else {
+            request.setStatus(ApprovalStatus.APPROVED);
+            executeApprovedAction(request);
+            auditLogService.logAction("MAKER_CHECKER_APPROVED", requestId.toString(), checkerName, null, "Action: " + request.getActionType());
         }
 
-        if (request.getStatus() != ApprovalStatus.PENDING) {
-            throw new AppException(
-                    "Only PENDING requests can be rejected. Current status: " + request.getStatus(),
-                    HttpStatus.BAD_REQUEST
-            );
+        return makerCheckerRepository.save(request);
+    }
+
+    @Transactional
+    public MakerCheckerRequest reject(UUID requestId, UUID checkerId, String checkerName, String rejectionReason) {
+        MakerCheckerRequest request = getRequestOrThrow(requestId);
+
+        if (request.getMakerId().equals(checkerId)) {
+            auditLogService.logAction("SELF_APPROVAL_BLOCKED", requestId.toString(), checkerName, null, "Maker attempted to self-reject");
+            throw new AppException("A maker cannot reject their own request.", HttpStatus.FORBIDDEN);
         }
 
         if (rejectionReason == null || rejectionReason.isBlank()) {
@@ -238,123 +164,51 @@ public class MakerCheckerService {
             transactionRepository.findById(request.getEntityId()).ifPresent(transaction -> {
                 transaction.setStatus(TransactionStatus.REJECTED);
                 transactionRepository.save(transaction);
+                auditLogService.logAction("TRANSACTION_REJECTED", transaction.getId().toString(), checkerName, null, "Reason: " + rejectionReason);
             });
         }
 
-        MakerCheckerRequest savedRequest = makerCheckerRepository.save(request);
-        log.info("Request {} REJECTED by checker: {} | Reason: {}",
-                requestId, checkerName, rejectionReason);
-
-        return savedRequest;
+        return makerCheckerRepository.save(request);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // QUERY METHODS — Viewing Requests
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Get all PENDING approval requests.
-     * Used by CHECKER users to see what needs their attention.
-     *
-     * @return List of pending requests
-     */
     public List<MakerCheckerRequest> getAllPendingRequests() {
-        return makerCheckerRepository.findByStatus(ApprovalStatus.PENDING);
+        return makerCheckerRepository.findAll().stream()
+                .filter(r -> r.getStatus() != ApprovalStatus.APPROVED && r.getStatus() != ApprovalStatus.REJECTED && r.getStatus() != ApprovalStatus.CANCELLED)
+                .toList();
     }
 
-    /**
-     * Get all requests created by a specific maker.
-     *
-     * @param makerId UUID of the maker
-     * @return List of requests created by this maker
-     */
     public List<MakerCheckerRequest> getRequestsByMaker(UUID makerId) {
         return makerCheckerRepository.findByMakerId(makerId);
     }
 
-    /**
-     * Get a specific request by ID.
-     *
-     * @param requestId UUID of the request
-     * @return The request details
-     */
     public MakerCheckerRequest getRequest(UUID requestId) {
         return getRequestOrThrow(requestId);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PRIVATE HELPERS
-    // ─────────────────────────────────────────────────────────────
-
-    /**
-     * Finds a MakerCheckerRequest by ID or throws 404 if not found.
-     */
     private MakerCheckerRequest getRequestOrThrow(UUID requestId) {
         return makerCheckerRepository.findById(requestId)
-                .orElseThrow(() -> new AppException(
-                        "Approval request not found with ID: " + requestId,
-                        HttpStatus.NOT_FOUND
-                ));
+                .orElseThrow(() -> new AppException("Approval request not found with ID: " + requestId, HttpStatus.NOT_FOUND));
     }
 
-    /**
-     * Executes the actual action when a CHECKER approves a request.
-     *
-     * Uses a switch on actionType to determine what to do:
-     * - "CREATE_USER" → Activate the user account
-     * - "INITIATE_PAYMENT" → Submit payment to bank network
-     * - "ADD_BENEFICIARY" → Save the beneficiary
-     * - etc.
-     *
-     * @param request The approved MakerCheckerRequest
-     */
     private void executeApprovedAction(MakerCheckerRequest request) {
         switch (request.getActionType()) {
-
             case "CREATE_USER" -> {
-                // Activate the user account so they can login
                 UUID userId = request.getEntityId();
                 User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new AppException(
-                                "User not found for approval: " + userId,
-                                HttpStatus.NOT_FOUND
-                        ));
+                        .orElseThrow(() -> new AppException("User not found for approval: " + userId, HttpStatus.NOT_FOUND));
                 user.setStatus(UserStatus.ACTIVE);
                 user.setApprovedBy(request.getCheckerId());
                 user.setApprovedAt(LocalDateTime.now());
                 userRepository.save(user);
                 log.info("User {} ACTIVATED after checker approval", user.getEmail());
             }
-
-            case "MODIFY_USER" -> {
-                // Apply modifications to the user
-                // TODO: Parse request.getRequestPayload() and apply changes
-                log.info("User modification approved for entity: {}", request.getEntityId());
-            }
-
             case "DEACTIVATE_USER" -> {
                 UUID userId = request.getEntityId();
                 userRepository.findById(userId).ifPresent(user -> {
                     user.setStatus(UserStatus.DEACTIVATED);
                     userRepository.save(user);
-                    log.info("User {} DEACTIVATED after checker approval", user.getEmail());
                 });
             }
-
-            case "INITIATE_PAYMENT" -> {
-                Transaction transaction = transactionRepository.findById(request.getEntityId())
-                    .orElseThrow(() -> new AppException(
-                        "Payment not found for approval: " + request.getEntityId(),
-                        HttpStatus.NOT_FOUND
-                    ));
-                transaction.setStatus(TransactionStatus.APPROVED);
-                transaction.setApprovedBy(userRepository.findById(request.getCheckerId()).orElse(null));
-                transaction.setApprovedAt(LocalDateTime.now());
-                transactionRepository.save(transaction);
-                transactionService.processApprovedTransaction(transaction.getId());
-                log.info("Payment {} approved and sent for bank processing", request.getEntityId());
-            }
-
             default -> log.warn("Unknown action type in approved request: {}", request.getActionType());
         }
     }

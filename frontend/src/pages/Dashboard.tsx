@@ -1,3 +1,4 @@
+import { UserButton, useUser } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
@@ -6,7 +7,8 @@ import {
   Menu, X, Bell, Plus, Download, QrCode
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { userApi, transactionApi, makerCheckerApi, paymentApi, llmApi, authApi } from '../api';
+import { userApi, transactionApi, makerCheckerApi, paymentApi, llmApi, authApi, upiApi } from '../api';
+import { History as HistoryIcon, ChevronDown } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 // ─── Types & Global UI State ──────────────────────────────────────────────────
@@ -589,8 +591,278 @@ const LlmPage = ({ showToast }: any) => {
 };
 
 // ─── Main App Layout ──────────────────────────────────────────────────────────
+
+// --------------------------------------------------------------------------------
+// NEW HACKATHON DASHBOARDS: Normal User (Sender) & Merchant (Receiver/Sender)
+// --------------------------------------------------------------------------------
+
+const TransactionItem = ({ tx }: { tx: any }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isOut = tx.type === 'OUT';
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden">
+      <div className="p-4 cursor-pointer hover:bg-slate-50 transition flex justify-between items-center" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isOut ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
+            <Activity size={20} />
+          </div>
+          <div>
+            <p className="font-bold text-sm text-slate-800">{isOut ? 'Paid to' : 'Received from'}</p>
+            <p className="text-xs text-slate-500 max-w-[120px] truncate">{isOut ? tx.receiverId : tx.senderId}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">{tx.createdAt ? new Date(tx.createdAt).toLocaleString() : 'Just now'}</p>
+          </div>
+        </div>
+        <div className="text-right flex items-center gap-3">
+          <div>
+            <p className="font-bold text-slate-800">₹{tx.totalAmount}</p>
+            <p className="text-xs text-green-600 font-bold">{tx.status}</p>
+          </div>
+          <ChevronDown size={16} className={`text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+      
+      {expanded && tx.packets && (
+        <div className="bg-slate-50 p-4 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Bot size={16} className="text-blue-600"/>
+            <p className="text-xs font-bold text-blue-800">Smart Split Applied: {tx.packets.length} Packets</p>
+          </div>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            {tx.packets.map((p: any, i: number) => (
+              <div key={i} className="flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm text-xs">
+                <span className="font-mono text-slate-500">{p.packetUtr}</span>
+                <span className="font-bold text-slate-700">₹{p.amount}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, onComplete: () => void }) => {
+  const { user } = useUser();
+  const { user: backendUser } = useAuth();
+  const [vpa, setVpa] = useState(defaultVpa);
+  const [amount, setAmount] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handlePay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus(null);
+    try {
+      const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
+      await upiApi.sendOptimized(email, vpa, Number(amount));
+      setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
+      onComplete();
+      setAmount('');
+    } catch (err) {
+      setStatus('ERROR');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handlePay} className="space-y-4">
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To UPI ID / Number</label>
+        <input required value={vpa} onChange={e => setVpa(e.target.value)} placeholder="merchant@example.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount (₹)</label>
+        <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
+      </div>
+      <button disabled={loading} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md">
+        {loading ? 'Processing...' : 'Proceed to Pay'}
+      </button>
+
+      {status === 'SPLIT_SUCCESS' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2">
+          <Bot className="text-blue-600 shrink-0" size={18}/>
+          <p className="text-blue-800 text-xs font-bold mt-0.5">Payment automatically split into micro-packets of ₹1,999.</p>
+        </div>
+      )}
+    </form>
+  );
+};
+
+const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab }: any) => {
+  const { logout, user: backendUser } = useAuth();
+  const { user: clerkUser } = useUser();
+  
+  const handleLogout = () => {
+    if (backendUser) logout();
+  };
+
+  return (
+    <div className="max-w-md mx-auto bg-slate-50 min-h-[90vh] rounded-3xl shadow-lg border border-slate-200 mt-4 overflow-hidden flex flex-col">
+      <div className="bg-purple-700 p-6 text-white text-center rounded-b-3xl shadow-md z-10 relative">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-bold text-lg">{title}</h2>
+          <div className="flex items-center gap-3">
+            {clerkUser && <UserButton />}
+            {backendUser && (
+              <button onClick={handleLogout} className="p-2 bg-purple-800 rounded-full hover:bg-purple-900 transition-colors" title="Logout">
+                <LogOut size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="bg-purple-800/50 rounded-xl p-3 border border-purple-600">
+          <p className="text-purple-200 text-xs mb-1">My UPI ID</p>
+          <p className="font-mono text-sm font-bold">{upiId}</p>
+        </div>
+      </div>
+      
+      <div className="px-6 -mt-6 relative z-20 mb-4">
+        <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-4 grid grid-cols-4 gap-2">
+          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('qr')}>
+            <QrCode size={24} className={activeTab === 'qr' ? 'text-purple-600' : 'text-slate-400'} />
+            <span className="text-[10px] font-bold text-slate-600">QR</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('contact')}>
+            <Users size={24} className={activeTab === 'contact' ? 'text-purple-600' : 'text-slate-400'} />
+            <span className="text-[10px] font-bold text-slate-600">Contacts</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('pay')}>
+            <Activity size={24} className={activeTab === 'pay' ? 'text-purple-600' : 'text-slate-400'} />
+            <span className="text-[10px] font-bold text-slate-600">Pay</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={24} className={activeTab === 'history' ? 'text-purple-600' : 'text-slate-400'} />
+            <span className="text-[10px] font-bold text-slate-600">History</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-6 pt-0 flex-1 overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const PhonePeDashboard = () => {
+  const { user } = useUser();
+  const { user: backendUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('pay');
+  const [history, setHistory] = useState<any[]>([]);
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || '';
+    upiApi.getOutflows(email).then(r => {
+      setHistory(r.data.map((tx: any) => ({ ...tx, type: 'OUT' })));
+    }).catch(() => {});
+  }, [refresh, user, backendUser]);
+
+  const contacts = [
+    { name: 'My Number', phone: '7818086344', vpa: '7818086344@ybl' },{ name: 'Vansh (My Number)', phone: '7818086344', vpa: '7818086344@kyro' }];
+
+  return (
+    <MobileDashboardLayout title="Normal User" upiId={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+      {activeTab === 'pay' && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+        </div>
+      )}
+      {activeTab === 'history' && (
+        <div>
+          <h3 className="font-bold text-slate-800 mb-4">Payment History</h3>
+          {history.map((tx, i) => <TransactionItem key={i} tx={tx} />)}
+        </div>
+      )}
+      {activeTab === 'contact' && (
+        <div className="space-y-3">
+          <h3 className="font-bold text-slate-800 mb-3">Pay Contacts</h3>
+          {contacts.map((c, i) => (
+            <div key={i} onClick={() => setActiveTab('pay')} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50">
+              <p className="font-bold text-sm text-slate-800">{c.name}</p>
+              <p className="text-xs text-slate-500">{c.phone}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {activeTab === 'qr' && (
+        <div className="text-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <QRCodeSVG value={`upi://pay?pa=${user?.primaryEmailAddress?.emailAddress || backendUser?.email}&pn=User`} size={150} className="mx-auto mb-4"/>
+          <p className="text-xs font-bold text-slate-500">Scan to pay me</p>
+        </div>
+      )}
+    </MobileDashboardLayout>
+  );
+};
+
+const MerchantDashboard = () => {
+  const { user } = useUser();
+  const { user: backendUser } = useAuth();
+  const [activeTab, setActiveTab] = useState('history');
+  const [history, setHistory] = useState<any[]>([]);
+  const [refresh, setRefresh] = useState(0);
+
+  useEffect(() => {
+    const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'vanshj7818@gmail.com';
+    Promise.all([
+      upiApi.getInflows(email).catch(() => ({ data: [] })),
+      upiApi.getOutflows(email).catch(() => ({ data: [] }))
+    ]).then(([inRes, outRes]) => {
+      const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
+      const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
+      const all = [...ins, ...outs].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setHistory(all);
+    });
+  }, [refresh, backendUser, user]);
+
+  return (
+    <MobileDashboardLayout title="Merchant Business Portal" upiId={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+      {activeTab === 'pay' && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-4 text-sm">Vendor Payouts (Smart Split)</h3>
+          <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+        </div>
+      )}
+      {activeTab === 'history' && (
+        <div>
+          <h3 className="font-bold text-slate-800 mb-4">Customer Inflows</h3>
+          {history.length === 0 && <p className="text-slate-500 text-sm">No inflows yet.</p>}
+          {history.map((tx, i) => <TransactionItem key={i} tx={tx} />)}
+        </div>
+      )}
+      {activeTab === 'contact' && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+           <p className="text-slate-500 text-sm">Customer directory synced.</p>
+        </div>
+      )}
+      {activeTab === 'qr' && (
+        <div className="text-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 className="font-bold text-slate-800 mb-4">Store QR Code</h3>
+          <QRCodeSVG value={`upi://pay?pa=${user?.primaryEmailAddress?.emailAddress || backendUser?.email}&pn=Merchant`} size={150} className="mx-auto mb-4"/>
+          <p className="text-xs font-bold text-slate-500 mt-4">Print this QR for your shop counter.</p>
+        </div>
+      )}
+    </MobileDashboardLayout>
+  );
+};
+
 const Dashboard = () => {
-  const [page, setPage] = useState<Page>('dashboard');
+  
+  const { user: clerkUser } = useUser();
+  const { user: backendUser } = useAuth();
+  
+  // THREE-TIER ROUTING LOGIC
+  const email = clerkUser?.primaryEmailAddress?.emailAddress || backendUser?.email || '';
+  const isMerchant = email.toLowerCase().includes('merchant') || email.toLowerCase().includes('vanshj') || email.toLowerCase().includes('mjstyle');
+  const isBankEmployee = !!backendUser && !isMerchant;
+  
+  
+
+  if (isMerchant) return <MerchantDashboard />;
+  if (!isBankEmployee) return <PhonePeDashboard />;
+const [page, setPage] = useState<Page>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState<{msg: string, type: string} | null>(null);
 

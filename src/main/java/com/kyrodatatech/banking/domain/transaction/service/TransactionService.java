@@ -121,12 +121,12 @@ public class TransactionService {
 
         // Step 5: Move to approval queue if all checks passed
         if (transaction.getStatus() == TransactionStatus.AML_CLEARED) {
-            transaction.setStatus(TransactionStatus.PENDING_APPROVAL);
+            transaction.setStatus(TransactionStatus.PENDING_CHECKER);
             log.info("Transaction {} moved to PENDING_APPROVAL queue", transaction.getTransactionRefNo());
         }
 
         transaction = transactionRepository.save(transaction);
-        if (transaction.getStatus() == TransactionStatus.PENDING_APPROVAL) {
+        if (transaction.getStatus() == TransactionStatus.PENDING_CHECKER) {
             createPaymentApprovalRequest(transaction);
         }
         return transaction;
@@ -145,7 +145,7 @@ public class TransactionService {
                     .makerName(transaction.getCreatedBy().getFullName())
                     .entityId(transaction.getId())
                     .entityType("TRANSACTION")
-                    .status(ApprovalStatus.PENDING)
+                    .status(ApprovalStatus.PENDING_CHECKER)
                     .priority(transaction.getAmount().compareTo(new BigDecimal("5000000")) >= 0 ? "HIGH" : "MEDIUM")
                     .build();
 

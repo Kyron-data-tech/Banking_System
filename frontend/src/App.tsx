@@ -2,12 +2,14 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+  const { isSignedIn } = useClerkAuth();
+  return (isAuthenticated || isSignedIn) ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const OAuthCallback = () => {
@@ -43,9 +45,11 @@ const OAuthCallback = () => {
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
+  const { isSignedIn } = useClerkAuth();
+  const isLoggedIn = isAuthenticated || isSignedIn;
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/oauth2/callback" element={<OAuthCallback />} />
       <Route path="/*" element={
         <ProtectedRoute>

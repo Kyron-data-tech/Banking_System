@@ -44,3 +44,11 @@ jdk21/
 ### Frontend ###
 frontend/node_modules/
 frontend/dist/
+
+backend.log
+backend_err.log
+data/
+jdk21.zip
+original_login.txt
+jdk21/
+*.zip

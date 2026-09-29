@@ -1,24 +1,40 @@
 import axios from 'axios';
 
+/**
+ * Enterprise Axios client configured with automatic JWT injection,
+ * base URL configuration, and standardized error handling.
+ */
 const api = axios.create({
   baseURL: `${window.location.protocol}//${window.location.hostname}:8080/api`,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 15000,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Request Interceptor: Attach Bearer token to all outgoing requests
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
+// Response Interceptor: Catch 401 Unauthorized and redirect to login
 api.interceptors.response.use(
-  (res) => res,
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.clear();
-      window.location.href = '/login';
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -26,34 +42,61 @@ api.interceptors.response.use(
 
 export default api;
 
+// -----------------------------------------------------------------------------
+// Domain API Endpoints
+// -----------------------------------------------------------------------------
 export const authApi = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
+  register: (data: { fullName: string; email: string; password?: string }) =>
+    api.post('/auth/register', data),
   ping: () => api.get('/auth/ping'),
-  register: (data: any) => api.post('/auth/register', data),
-};
-
-export const userApi = {
-  getAll: () => api.get('/users'),
-  getById: (id: string) => api.get(`/users/${id}`),
-};
-
-export const makerCheckerApi = {
-  getPending: () => api.get('/maker-checker/pending'),
-  approve: (id: string) => api.post(`/maker-checker/${id}/approve`),
-  reject: (id: string, rejectionReason: string) =>
-    api.post(`/maker-checker/${id}/reject`, { rejectionReason }),
 };
 
 export const transactionApi = {
   getAll: () => api.get('/transactions'),
+  initiate: (type: string, amount: number, makerId: string, beneficiaryName: string, destinationAccount: string, ifscOrBic: string) =>
+    api.post(`/transactions/initiate?type=${encodeURIComponent(type)}&amount=${amount}&makerId=${encodeURIComponent(makerId)}&beneficiaryName=${encodeURIComponent(beneficiaryName)}&destinationAccount=${encodeURIComponent(destinationAccount)}&ifscOrBic=${encodeURIComponent(ifscOrBic)}`),
 };
 
-export const paymentApi = {
-  initiate: (type: string, payload: Record<string, unknown>) =>
-    api.post(`/payments/${type.toLowerCase()}`, payload),
+export const collectionApi = {
+  generateQr: (vpa: string, amount: number, note: string) =>
+    api.post('/collections/qr/generate', { vpa, amount: String(amount), note }),
+  processVirtualAccount: (data: Record<string, unknown>) =>
+    api.post('/collections/virtual-account/process', data),
+};
+
+export const liquidityApi = {
+  executeSweep: (fromAccount: string, toAccount: string, amount: number) =>
+    api.post('/liquidity/sweep/execute', {
+      fromAccount,
+      toAccount,
+      amount: String(amount),
+    }),
+};
+
+export const makerCheckerApi = {
+  getPending: () => api.get('/maker-checker/pending'),
+  approve: (requestId: string, comments = '') =>
+    api.post(`/maker-checker/${encodeURIComponent(requestId)}/approve`, { comments }),
+  reject: (requestId: string, rejectionReason: string) =>
+    api.post(`/maker-checker/${encodeURIComponent(requestId)}/reject`, { rejectionReason }),
+  getMyRequests: () => api.get('/maker-checker/my-requests'),
+};
+
+export const userApi = {
+  getAll: () => api.get('/users'),
 };
 
 export const llmApi = {
   analyze: (text: string) => api.post('/llm/analyze', { transactionDetails: text }),
 };
+
+export const upiApi = {
+  sendOptimized: (senderId: string, receiverId: string, amount: number) => 
+    api.post('/upi/send', { senderId, receiverId, amount }),
+  getOutflows: (senderId: string) => api.get(`/upi/outflows?senderId=${encodeURIComponent(senderId)}`), getInflows: (receiverId: string) => 
+    api.get(`/upi/inflows?receiverId=${encodeURIComponent(receiverId)}`)
+};
+
+export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };

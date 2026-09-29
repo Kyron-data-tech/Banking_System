@@ -50,6 +50,7 @@ import java.util.UUID;
        })
 @Getter
 @Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

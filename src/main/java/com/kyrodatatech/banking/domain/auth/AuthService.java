@@ -6,6 +6,9 @@ import com.kyrodatatech.banking.domain.auth.dto.RegisterRequest;
 import com.kyrodatatech.banking.domain.user.entity.User;
 import com.kyrodatatech.banking.domain.user.enums.UserStatus;
 import com.kyrodatatech.banking.domain.user.repository.UserRepository;
+import com.kyrodatatech.banking.domain.user.repository.RoleRepository;
+import com.kyrodatatech.banking.domain.user.enums.RoleType;
+import com.kyrodatatech.banking.domain.user.entity.Role;
 import com.kyrodatatech.banking.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +58,7 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;       // BCrypt encoder
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
@@ -83,14 +87,22 @@ public class AuthService {
         }
 
         // Create new user — password is BCrypt hashed, status is PENDING
+
+        java.util.Set<Role> roles = new java.util.HashSet<>();
+        roleRepository.findByRoleType(RoleType.BANK_SUPER_ADMIN).ifPresent(roles::add);
+        roleRepository.findByRoleType(RoleType.CORP_MAKER).ifPresent(roles::add);
+        roleRepository.findByRoleType(RoleType.CORP_CHECKER).ifPresent(roles::add);
+
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))  // BCrypt hash!
                 .employeeId(request.getEmployeeId())
                 .phoneNumber(request.getPhoneNumber())
-                .status(UserStatus.PENDING_APPROVAL)  // Must be approved by a CHECKER
+                .status(UserStatus.ACTIVE) // Auto-approved for Hackathon
+                .roles(roles)
                 .build();
+
 
         userRepository.save(user);
 
@@ -116,8 +128,29 @@ public class AuthService {
      * @throws AppException if credentials are wrong or account is not active
      */
     @Transactional
+
     public AuthResponse login(LoginRequest request) {
-        // Step 1: Authenticate — Spring Security handles BCrypt comparison
+        // HACKATHON MAGIC: Auto-register if user doesn't exist
+
+        if (!userRepository.existsByEmail(request.getEmail())) {
+            java.util.Set<Role> roles = new java.util.HashSet<>();
+            roleRepository.findByRoleType(RoleType.BANK_SUPER_ADMIN).ifPresent(roles::add);
+            roleRepository.findByRoleType(RoleType.CORP_MAKER).ifPresent(roles::add);
+            roleRepository.findByRoleType(RoleType.CORP_CHECKER).ifPresent(roles::add);
+            
+            User magicUser = User.builder()
+                .fullName(request.getEmail().split("@")[0])
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .status(UserStatus.ACTIVE)
+                .roles(roles)
+                .build();
+            userRepository.save(magicUser);
+        }
+
+
+        // Step 1: Authenticate
+        // Spring Security handles BCrypt comparison
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),    // username
