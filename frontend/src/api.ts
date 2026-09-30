@@ -13,6 +13,17 @@ const api = axios.create({
 });
 
 // Request Interceptor: Attach Bearer token to all outgoing requests
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.data && error.response.data.message) {
+        error.message = error.response.data.message;
+    } else if (error.response && error.response.data && typeof error.response.data === 'string') {
+        error.message = error.response.data;
+    }
+    return Promise.reject(error);
+  }
+);
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
@@ -95,6 +106,10 @@ export const llmApi = {
 export const upiApi = {
   sendOptimized: (senderId: string, receiverId: string, amount: number) => 
     api.post('/upi/send', { senderId, receiverId, amount }),
+  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=\${encodeURIComponent(vpa)}`),
+  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=\${encodeURIComponent(vpa)}`),
+  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=\${encodeURIComponent(vpa)}`),
+  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=${encodeURIComponent(vpa)}`),
   getOutflows: (senderId: string) => api.get(`/upi/outflows?senderId=${encodeURIComponent(senderId)}`), getInflows: (receiverId: string) => 
     api.get(`/upi/inflows?receiverId=${encodeURIComponent(receiverId)}`)
 };

@@ -64,7 +64,12 @@ export default function Login() {
       await login(email, useOtp ? otp : password);
       navigate('/');
     } catch (err: any) {
-      setError(err.message || (isRegister ? 'Registration failed' : 'Invalid email or password'));
+      if (isRegister && err.message?.toLowerCase().includes('already registered')) {
+            setIsRegister(false);
+            setError('You already have an account. Please sign in with your password.');
+        } else {
+            setError(err.message || (isRegister ? 'Registration failed' : 'Invalid email or password'));
+        }
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.kyrodatatech.banking.domain.llm.LlmRiskService;
+import java.util.Random;
+import com.kyrodatatech.banking.domain.llm.LlmRiskService;
+import java.util.Random;
+import com.kyrodatatech.banking.domain.llm.LlmRiskService;
+import java.util.Random;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,12 +26,26 @@ import java.util.UUID;
 public class UpiSplitService {
 
     private final UpiParentTransactionRepository upiParentTransactionRepository;
+    private final LlmRiskService llmRiskService;
     private static final BigDecimal OPTIMAL_PACKET_SIZE = new BigDecimal("1999.00");
 
     @Transactional
     public UpiParentTransaction initiateOptimizedTransfer(String senderId, String receiverId, BigDecimal totalAmount) {
         String parentRef = "UPI-P-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         
+        // NPCI SIMULATION: Risk Check
+        String risk = llmRiskService.evaluateTransactionRisk(parentRef, "UPI", totalAmount.doubleValue(), senderId);
+        if ("HIGH".equalsIgnoreCase(risk)) {
+            throw new RuntimeException("NPCI-U16: Risk Threshold Exceeded");
+        }
+
+        // NPCI SIMULATION: Network Latency
+        try {
+            Thread.sleep(2500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         UpiParentTransaction parent = UpiParentTransaction.builder()
                 .parentReferenceNo(parentRef)
                 .senderId(senderId)
@@ -43,7 +63,7 @@ public class UpiSplitService {
             BigDecimal packetAmount = remainingAmount.compareTo(OPTIMAL_PACKET_SIZE) > 0 ? OPTIMAL_PACKET_SIZE : remainingAmount;
             
             UpiTransactionPacket packet = UpiTransactionPacket.builder()
-                    .packetUtr("UTR" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase())
+                    .packetUtr(String.format("%012d", 100000000000L + (long)(new Random().nextDouble() * 899999999999L)))
                     .amount(packetAmount)
                     .status("SUCCESS")
                     .parentTransaction(parent)

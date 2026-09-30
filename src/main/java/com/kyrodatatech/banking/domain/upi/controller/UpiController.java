@@ -18,7 +18,6 @@ public class UpiController {
     private final UpiSplitService upiSplitService;
 
     @PostMapping("/send")
-    
     public ResponseEntity<?> sendOptimizedTransfer(@RequestBody Map<String, Object> request) {
         String senderId = (String) request.get("senderId");
         String receiverId = (String) request.get("receiverId");
@@ -41,6 +40,22 @@ public class UpiController {
     @GetMapping("/outflows")
     public ResponseEntity<List<UpiParentTransaction>> getOutflows(@RequestParam String senderId) {
         return ResponseEntity.ok(upiSplitService.getOutflowsForSender(senderId));
+    }
+
+    @GetMapping("/verify-vpa")
+    public ResponseEntity<?> verifyVpa(@RequestParam String vpa) {
+        String name = vpa.contains("@") ? vpa.split("@")[0] : vpa;
+        if (name.length() > 2) {
+            name = name.substring(0, 1).toUpperCase() + "****" + name.substring(name.length() - 1).toLowerCase();
+        } else {
+            name = "V****r";
+        }
+        try { Thread.sleep(800); } catch (Exception e) {} // Simulate VPA lookup latency
+        return ResponseEntity.ok(Map.of(
+            "vpa", vpa,
+            "verifiedName", name + " (Verified)",
+            "isValid", true
+        ));
     }
 
     @GetMapping("/inflows")

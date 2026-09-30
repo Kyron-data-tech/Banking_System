@@ -642,52 +642,132 @@ const TransactionItem = ({ tx }: { tx: any }) => {
 };
 
 const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, onComplete: () => void }) => {
-  const { user } = useUser();
-  const { user: backendUser } = useAuth();
-  const [vpa, setVpa] = useState(defaultVpa);
-  const [amount, setAmount] = useState('');
-  const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+    const { user } = useUser();
+    const { user: backendUser } = useAuth();
+    const [vpa, setVpa] = useState(defaultVpa);
+    const [amount, setAmount] = useState('');
+    const [status, setStatus] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    
+    // NEW NPCI STATES
+    const [verifying, setVerifying] = useState(false);
+    const [verifiedName, setVerifiedName] = useState<string | null>(null);
+    const [showMpin, setShowMpin] = useState(false);
 
-  const handlePay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus(null);
-    try {
-      const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
-      await upiApi.sendOptimized(email, vpa, Number(amount));
-      setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
-      onComplete();
-      setAmount('');
-    } catch (err) {
-      setStatus('ERROR');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const handleVerify = async () => {
+        if (!vpa) return;
+        setVerifying(true);
+        try {
+            const res = await upiApi.verifyVpa(vpa);
+            setVerifiedName(res.data.verifiedName);
+        } catch(e) {
+            setVerifiedName(null);
+        } finally {
+            setVerifying(false);
+        }
+    };
 
-  return (
-    <form onSubmit={handlePay} className="space-y-4">
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To UPI ID / Number</label>
-        <input required value={vpa} onChange={e => setVpa(e.target.value)} placeholder="merchant@example.com" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+    const handlePayClick = (e: React.FormEvent) => {
+        e.preventDefault();
+        setShowMpin(true);
+    };
+
+    const executePayment = async () => {
+        setShowMpin(false);
+        setLoading(true);
+        setStatus(null);
+        try {
+            const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
+            await upiApi.sendOptimized(email, vpa, Number(amount));
+            setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
+            onComplete();
+            setAmount('');
+            setVerifiedName(null);
+        } catch (err: any) {
+            if (err.message && err.message.includes("NPCI-U16")) {
+                setStatus('RISK_REJECTED');
+            } else {
+                setStatus('ERROR');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+      <div className="relative">
+        <form onSubmit={handlePayClick} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To UPI ID / Number</label>
+            <div className="flex gap-2">
+                <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="merchant@example.com" 
+  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+                <button type="button" onClick={handleVerify} disabled={verifying} className="px-4 bg-slate-200 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-300 transition-colors">{verifying ? '...' : 'Verify'}</button>
+            </div>
+            {verifiedName && <p className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1"><CheckCircle2 size={14}/> {verifiedName}</p>}
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount (₹)</label>
+            <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
+  placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
+          </div>
+          <button disabled={loading} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2">
+            Proceed to Pay
+          </button>
+    
+          {status === 'SPLIT_SUCCESS' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2 mt-2">
+              <Bot className="text-blue-600 shrink-0" size={18}/>
+              <p className="text-blue-800 text-xs font-bold mt-0.5">₹{amount} optimized into {Math.floor(Number(amount)/1999)} packets of ₹1,999 + remainder to bypass MDR.</p>
+            </div>
+          )}
+          {status === 'SUCCESS' && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-emerald-700 text-sm font-bold text-center mt-2">Payment Successful!</div>
+          )}
+          {status === 'RISK_REJECTED' && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm font-bold mt-2 flex items-center gap-2">
+              <AlertTriangle size={18} /> NPCI U16: High Risk Threshold Exceeded
+            </div>
+          )}
+        </form>
+
+        {loading && (
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-10 rounded-xl">
+                <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-3"></div>
+                <p className="text-sm font-bold text-slate-700 animate-pulse">Processing Payment securely via NPCI...</p>
+            </div>
+        )}
+
+        {showMpin && (
+            <div className="fixed inset-0 bg-slate-900/90 z-50 flex flex-col items-center justify-center p-4">
+                <div className="bg-slate-800 rounded-2xl w-full max-w-sm p-6 text-white shadow-2xl border border-slate-700">
+                    <div className="flex justify-between items-center mb-6">
+                        <span className="text-slate-400 font-bold cursor-pointer hover:text-white" onClick={() => setShowMpin(false)}>CANCEL</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-emerald-500 rounded-sm"></div>
+                            <span className="font-bold text-sm tracking-widest">NPCI</span>
+                        </div>
+                    </div>
+                    <div className="text-center mb-6">
+                        <p className="text-slate-400 text-sm mb-1">{verifiedName || vpa}</p>
+                        <p className="text-3xl font-bold">₹{amount}</p>
+                    </div>
+                    <div className="bg-slate-900 rounded-xl p-4 mb-6 text-center border border-slate-700">
+                        <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">ENTER 6-DIGIT UPI PIN</p>
+                        <div className="flex justify-center gap-3">
+                            {[...Array(6)].map((_, i) => (
+                                <div key={i} className="w-3 h-3 rounded-full bg-slate-600"></div>
+                            ))}
+                        </div>
+                    </div>
+                    <button onClick={executePayment} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors">
+                        <CheckCircle2 size={24} /> Submit
+                    </button>
+                </div>
+            </div>
+        )}
       </div>
-      <div>
-        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount (₹)</label>
-        <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
-      </div>
-      <button disabled={loading} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md">
-        {loading ? 'Processing...' : 'Proceed to Pay'}
-      </button>
-
-      {status === 'SPLIT_SUCCESS' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2">
-          <Bot className="text-blue-600 shrink-0" size={18}/>
-          <p className="text-blue-800 text-xs font-bold mt-0.5">Payment automatically split into micro-packets of ₹1,999.</p>
-        </div>
-      )}
-    </form>
-  );
+    );
 };
 
 const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab }: any) => {
@@ -804,21 +884,38 @@ const MerchantDashboard = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [refresh, setRefresh] = useState(0);
 
+  const [incomingToast, setIncomingToast] = useState<{amount: number, sender: string} | null>(null);
+
   useEffect(() => {
     const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'vanshj7818@gmail.com';
-    Promise.all([
-      upiApi.getInflows(email).catch(() => ({ data: [] })),
-      upiApi.getOutflows(email).catch(() => ({ data: [] }))
-    ]).then(([inRes, outRes]) => {
-      const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
-      const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
-      const all = [...ins, ...outs].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setHistory(all);
-    });
+    
+    const fetchHistory = () => {
+        Promise.all([
+          upiApi.getInflows(email).catch(() => ({ data: [] })),
+          upiApi.getOutflows(email).catch(() => ({ data: [] }))
+        ]).then(([inRes, outRes]) => {
+          const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
+          const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
+          const all = [...ins, ...outs].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          
+          setHistory(prev => {
+              if (prev.length > 0 && all.length > 0 && all[0].id !== prev[0].id && all[0].type === 'IN') {
+                  setIncomingToast({amount: all[0].totalAmount, sender: all[0].senderId});
+                  setTimeout(() => setIncomingToast(null), 5000);
+              }
+              return all;
+          });
+        });
+    };
+
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 3000);
+    return () => clearInterval(interval);
   }, [refresh, backendUser, user]);
 
   return (
-    <MobileDashboardLayout title="Merchant Business Portal" upiId={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
+      <MobileDashboardLayout title="Merchant Business Portal" upiId={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-800 mb-4 text-sm">Vendor Payouts (Smart Split)</h3>
@@ -845,6 +942,7 @@ const MerchantDashboard = () => {
         </div>
       )}
     </MobileDashboardLayout>
+    </>
   );
 };
 
@@ -855,7 +953,7 @@ const Dashboard = () => {
   
   // THREE-TIER ROUTING LOGIC
   const email = clerkUser?.primaryEmailAddress?.emailAddress || backendUser?.email || '';
-  const isMerchant = email.toLowerCase().includes('merchant') || email.toLowerCase().includes('vanshj') || email.toLowerCase().includes('mjstyle');
+  const isMerchant = email.toLowerCase().includes('merchant');
   const isBankEmployee = !!backendUser && !isMerchant;
   
   
