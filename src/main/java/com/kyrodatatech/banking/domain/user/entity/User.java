@@ -100,6 +100,12 @@ public class User implements UserDetails {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
+    @Column(name = "upi_id", unique = true, length = 50)
+    private String upiId;
+
+    @Column(name = "mpin", length = 100)
+    private String mpin;
+
     // ---- Role & Status ----
 
     /**

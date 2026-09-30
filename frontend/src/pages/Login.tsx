@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api';
-import { SignIn } from '@clerk/clerk-react';
+import { SignIn, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { 
   Activity,
   ShieldCheck,
@@ -38,7 +38,8 @@ export default function Login() {
   const [fullName, setFullName] = useState('');
   const [persona, setPersona] = useState<'USER' | 'MERCHANT' | 'EMPLOYEE'>('USER');
   
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
+  const { isSignedIn } = useClerkAuth();
   const navigate = useNavigate();
 
   const handleDemoFill = (demoEmail: string) => {
@@ -62,7 +63,7 @@ export default function Login() {
         });
       }
       await login(email, useOtp ? otp : password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       if (isRegister && err.message?.toLowerCase().includes('already registered')) {
             setIsRegister(false);
@@ -109,21 +110,21 @@ export default function Login() {
           <div className="flex p-1 bg-slate-100 rounded-xl mb-6">
             <button 
               type="button"
-              onClick={() => setPersona('USER')}
+              onClick={() => { setPersona('USER'); localStorage.setItem('userType', 'user'); if (isSignedIn) navigate('/dashboard'); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${persona === 'USER' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Normal User
             </button>
             <button 
               type="button"
-              onClick={() => setPersona('MERCHANT')}
+              onClick={() => { setPersona('MERCHANT'); localStorage.setItem('userType', 'merchant'); if (isSignedIn) navigate('/dashboard'); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${persona === 'MERCHANT' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Merchant
             </button>
             <button 
               type="button"
-              onClick={() => setPersona('EMPLOYEE')}
+              onClick={() => { setPersona('EMPLOYEE'); if (isAuthenticated) navigate('/dashboard'); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${persona === 'EMPLOYEE' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Bank Employee
@@ -137,9 +138,22 @@ export default function Login() {
             </div>
           )}
 
-          {persona === 'USER' ? (
+          {persona !== 'EMPLOYEE' ? (
             <div className="flex justify-center py-4 w-full">
-              <SignIn routing="hash" />
+              {isSignedIn ? (
+                  <div className="flex flex-col items-center justify-center p-8 bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                      <ShieldCheck className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">You are securely signed in</h3>
+                    <p className="text-sm text-slate-500 mb-6 text-center max-w-xs">You can continue to your selected portal or sign out to use a different account.</p>
+                    <button onClick={() => navigate('/dashboard')} className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition-colors">
+                      Continue to Dashboard
+                    </button>
+                  </div>
+                ) : (
+                  <SignIn routing="hash" forceRedirectUrl="/dashboard" />
+                )}
             </div>
           ) : (
             <form onSubmit={handleAuth} className="space-y-5">

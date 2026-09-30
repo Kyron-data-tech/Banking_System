@@ -9,7 +9,7 @@ import Dashboard from './pages/Dashboard';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   const { isSignedIn } = useClerkAuth();
-  return (isAuthenticated || isSignedIn) ? <>{children}</> : <Navigate to="/login" replace />;
+  return (isAuthenticated || isSignedIn) ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 const OAuthCallback = () => {
@@ -25,7 +25,7 @@ const OAuthCallback = () => {
     const roles = params.get('roles');
 
     if (!accessToken || !userId || !email || !fullName) {
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
       return;
     }
 
@@ -37,7 +37,7 @@ const OAuthCallback = () => {
       fullName,
       roles: roles ? roles.split(',') : [],
     }));
-    navigate('/', { replace: true });
+    navigate('/dashboard', { replace: true });
   }, [navigate]);
 
   return <div className="min-h-screen flex items-center justify-center text-slate-500">Signing you in...</div>;
@@ -49,13 +49,14 @@ const AppRoutes = () => {
   const isLoggedIn = isAuthenticated || isSignedIn;
   return (
     <Routes>
-      <Route path="/login" element={isLoggedIn ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/" element={<Login />} />
       <Route path="/oauth2/callback" element={<OAuthCallback />} />
-      <Route path="/*" element={
+      <Route path="/dashboard/*" element={
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
       } />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

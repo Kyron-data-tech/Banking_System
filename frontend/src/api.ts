@@ -43,8 +43,8 @@ api.interceptors.response.use(
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
       }
     }
     return Promise.reject(error);
@@ -104,14 +104,13 @@ export const llmApi = {
 };
 
 export const upiApi = {
-  sendOptimized: (senderId: string, receiverId: string, amount: number) => 
-    api.post('/upi/send', { senderId, receiverId, amount }),
-  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=\${encodeURIComponent(vpa)}`),
-  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=\${encodeURIComponent(vpa)}`),
-  verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=\${encodeURIComponent(vpa)}`),
+  sendOptimized: (senderId: string, receiverId: string, amount: number, mpin: string) => 
+    api.post('/upi/send', { senderId, receiverId, amount, mpin }),
   verifyVpa: (vpa: string) => api.get(`/upi/verify-vpa?vpa=${encodeURIComponent(vpa)}`),
-  getOutflows: (senderId: string) => api.get(`/upi/outflows?senderId=${encodeURIComponent(senderId)}`), getInflows: (receiverId: string) => 
-    api.get(`/upi/inflows?receiverId=${encodeURIComponent(receiverId)}`)
+  getOutflows: (senderId: string) => api.get(`/upi/outflows?senderId=${encodeURIComponent(senderId)}`),
+  getInflows: (receiverId: string) => api.get(`/upi/inflows?receiverId=${encodeURIComponent(receiverId)}`),
+  getUpiProfile: (email: string) => api.get(`/upi/me?email=${encodeURIComponent(email)}`),
+  onboard: (email: string, upiId: string, mpin: string) => api.post(`/upi/onboard`, { email, upiId, mpin })
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };

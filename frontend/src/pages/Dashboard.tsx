@@ -1,4 +1,4 @@
-import { UserButton, useUser } from '@clerk/clerk-react';
+import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
   LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
@@ -653,6 +653,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
     const [verifying, setVerifying] = useState(false);
     const [verifiedName, setVerifiedName] = useState<string | null>(null);
     const [showMpin, setShowMpin] = useState(false);
+    const [enteredMpin, setEnteredMpin] = useState("");
 
     const handleVerify = async () => {
         if (!vpa) return;
@@ -678,7 +679,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
         setStatus(null);
         try {
             const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
-            await upiApi.sendOptimized(email, vpa, Number(amount));
+            await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
             setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
             onComplete();
             setAmount('');
@@ -729,6 +730,11 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
               <AlertTriangle size={18} /> NPCI U16: High Risk Threshold Exceeded
             </div>
           )}
+          {status === 'ERROR' && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm font-bold mt-2 text-center">
+              Payment Failed. Incorrect MPIN or System Error.
+            </div>
+          )}
         </form>
 
         {loading && (
@@ -754,11 +760,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
                     </div>
                     <div className="bg-slate-900 rounded-xl p-4 mb-6 text-center border border-slate-700">
                         <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">ENTER 6-DIGIT UPI PIN</p>
-                        <div className="flex justify-center gap-3">
-                            {[...Array(6)].map((_, i) => (
-                                <div key={i} className="w-3 h-3 rounded-full bg-slate-600"></div>
-                            ))}
-                        </div>
+                        <input autoFocus required type="password" maxLength={6} pattern="[0-9]{6}" value={enteredMpin} onChange={e => setEnteredMpin(e.target.value)} placeholder="------" className="w-full bg-transparent text-center tracking-[1em] text-3xl font-bold outline-none text-white placeholder-slate-600" />
                     </div>
                     <button onClick={executePayment} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors">
                         <CheckCircle2 size={24} /> Submit
@@ -826,7 +828,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   );
 };
 
-const PhonePeDashboard = () => {
+const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
   const { user } = useUser();
   const { user: backendUser } = useAuth();
   const [activeTab, setActiveTab] = useState('pay');
@@ -834,7 +836,8 @@ const PhonePeDashboard = () => {
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || '';
+    
+    const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro';
     upiApi.getOutflows(email).then(r => {
       setHistory(r.data.map((tx: any) => ({ ...tx, type: 'OUT' })));
     }).catch(() => {});
@@ -844,7 +847,7 @@ const PhonePeDashboard = () => {
     { name: 'My Number', phone: '7818086344', vpa: '7818086344@ybl' },{ name: 'Vansh (My Number)', phone: '7818086344', vpa: '7818086344@kyro' }];
 
   return (
-    <MobileDashboardLayout title="Normal User" upiId={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <MobileDashboardLayout title="Normal User" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
@@ -877,7 +880,7 @@ const PhonePeDashboard = () => {
   );
 };
 
-const MerchantDashboard = () => {
+const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
   const { user } = useUser();
   const { user: backendUser } = useAuth();
   const [activeTab, setActiveTab] = useState('history');
@@ -915,7 +918,7 @@ const MerchantDashboard = () => {
 
   return (
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
-      <MobileDashboardLayout title="Merchant Business Portal" upiId={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+      <MobileDashboardLayout title="Merchant Business Portal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-800 mb-4 text-sm">Vendor Payouts (Smart Split)</h3>
@@ -947,6 +950,8 @@ const MerchantDashboard = () => {
 };
 
 const Dashboard = () => {
+  const { signOut } = useClerk();
+  const { logout } = useAuth();
   
   const { user: clerkUser } = useUser();
   const { user: backendUser } = useAuth();
@@ -958,10 +963,51 @@ const Dashboard = () => {
   
   
 
-  if (isMerchant) return <MerchantDashboard />;
-  if (!isBankEmployee) return <PhonePeDashboard />;
+
 const [page, setPage] = useState<Page>('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [verifiedUpiId, setVerifiedUpiId] = useState<string | null>(null);
+  const [newUpiId, setNewUpiId] = useState('');
+  const [newMpin, setNewMpin] = useState('');
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+    const [onboardError, setOnboardError] = useState<string | null>(null);
+  
+  
+  
+
+  useEffect(() => {
+    if (email && !isBankEmployee) {
+      upiApi.getUpiProfile(email).then(res => {
+        if (!res.data.hasUpi) {
+          setNeedsOnboarding(true);
+        } else {
+          setVerifiedUpiId(res.data.upiId);
+        }
+      }).catch(err => {
+         setNeedsOnboarding(true);
+      });
+    }
+  }, [email, isBankEmployee]);
+
+
+  const handleOnboard = async (e: any) => {
+      e.preventDefault();
+      setOnboardingLoading(true);
+      setOnboardError(null);
+      try {
+          await upiApi.onboard(email, newUpiId, newMpin);
+          setVerifiedUpiId(newUpiId);
+          setNeedsOnboarding(false);
+          showToast('UPI Setup Complete!', 'success');
+      } catch(err: any) {
+          setOnboardError(err.response?.data?.error || 'Error setting up UPI ID. It might be taken.');
+      } finally {
+          setOnboardingLoading(false);
+      }
+    };
+const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState<{msg: string, type: string} | null>(null);
 
   const showToast = (msg: string, type = 'info') => {
@@ -984,8 +1030,17 @@ const [page, setPage] = useState<Page>('dashboard');
     }
   };
 
-  return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+
+
+
+  let DashboardContent = null;
+  if (isMerchant) {
+    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} />;
+  } else if (!isBankEmployee) {
+    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} />;
+  } else {
+    DashboardContent = (
+      <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
       <Sidebar page={page} setPage={setPage} open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Topbar page={page} setOpen={setSidebarOpen} />
@@ -993,7 +1048,43 @@ const [page, setPage] = useState<Page>('dashboard');
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       </div>
     </div>
-  );
+    );
+  }
+
+  return (
+    <>
+
+
+      {needsOnboarding && (
+        <div className="fixed inset-0 bg-slate-900/90 z-[9999] flex flex-col items-center justify-center p-4">
+            <div className="bg-white rounded-3xl w-full max-w-md p-8 text-center shadow-2xl">
+                <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4"><ShieldCheck size={32} /></div>
+                <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to KyroPay!</h2>
+                <p className="text-slate-500 mb-6 text-sm">Please set up your secure UPI ID and 6-digit MPIN before you can start making payments.</p>
+                {onboardError && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200 mb-4">{onboardError}</div>}
+                <form onSubmit={handleOnboard} className="space-y-4 text-left">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Choose a UPI ID</label>
+                        <input required autoComplete="off" value={newUpiId} onChange={e => setNewUpiId(e.target.value)} placeholder="yourname@kyro" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Set 6-Digit MPIN</label>
+                        <input required type="password" maxLength={6} pattern="[0-9]{6}" value={newMpin} onChange={e => setNewMpin(e.target.value)} placeholder="------" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center tracking-[1em] text-lg font-bold outline-none" />
+                    </div>
+                    <button disabled={onboardingLoading} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md">
+                        {onboardingLoading ? 'Setting up...' : 'Complete Setup'}
+                      </button>
+                      <button type="button" onClick={() => { signOut(); logout(); window.location.href = '/'; }} className="w-full mt-4 py-3 text-slate-500 font-bold hover:text-slate-800 transition text-sm">
+                          Sign Out / Use a different account
+                      </button>
+                </form>
+            </div>
+        </div>
+      )}
+
+    {DashboardContent}
+  </>
+);
 };
 
 export default Dashboard;

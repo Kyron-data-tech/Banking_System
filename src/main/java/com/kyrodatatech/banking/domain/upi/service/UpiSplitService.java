@@ -3,22 +3,21 @@ package com.kyrodatatech.banking.domain.upi.service;
 import com.kyrodatatech.banking.domain.upi.entity.UpiParentTransaction;
 import com.kyrodatatech.banking.domain.upi.entity.UpiTransactionPacket;
 import com.kyrodatatech.banking.domain.upi.repository.UpiParentTransactionRepository;
+import com.kyrodatatech.banking.domain.user.entity.User;
+import com.kyrodatatech.banking.domain.user.repository.UserRepository;
+import com.kyrodatatech.banking.domain.llm.LlmRiskService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.kyrodatatech.banking.domain.llm.LlmRiskService;
-import java.util.Random;
-import com.kyrodatatech.banking.domain.llm.LlmRiskService;
-import java.util.Random;
-import com.kyrodatatech.banking.domain.llm.LlmRiskService;
-import java.util.Random;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -26,11 +25,41 @@ import java.util.UUID;
 public class UpiSplitService {
 
     private final UpiParentTransactionRepository upiParentTransactionRepository;
+    private final UserRepository userRepository;
     private final LlmRiskService llmRiskService;
     private static final BigDecimal OPTIMAL_PACKET_SIZE = new BigDecimal("1999.00");
 
     @Transactional
-    public UpiParentTransaction initiateOptimizedTransfer(String senderId, String receiverId, BigDecimal totalAmount) {
+    public User onboardUser(String email, String upiId, String mpin) {
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User newUser = User.builder()
+                .email(email)
+                .fullName(email.split("@")[0]) // Default name
+                .status(com.kyrodatatech.banking.domain.user.enums.UserStatus.ACTIVE)
+                .build();
+            return userRepository.save(newUser);
+        });
+        
+        if (userRepository.findByUpiId(upiId).isPresent() && !userRepository.findByUpiId(upiId).get().getId().equals(user.getId())) {
+            throw new RuntimeException("UPI ID already taken");
+        }
+        
+        user.setUpiId(upiId);
+        user.setMpin(mpin); // In production, hash this!
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public UpiParentTransaction initiateOptimizedTransfer(String senderId, String receiverId, BigDecimal totalAmount, String mpin) {
+        
+        // 1. Verify MPIN
+        User sender = userRepository.findByEmail(senderId).orElse(null);
+        if (sender != null) {
+            if (sender.getMpin() == null || !sender.getMpin().equals(mpin)) {
+                throw new RuntimeException("INVALID_MPIN");
+            }
+        }
+
         String parentRef = "UPI-P-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         
         // NPCI SIMULATION: Risk Check
@@ -53,31 +82,38 @@ public class UpiSplitService {
                 .totalAmount(totalAmount)
                 .status("COMPLETED")
                 .createdAt(LocalDateTime.now())
-                .packets(new ArrayList<>())
                 .build();
 
-        BigDecimal remainingAmount = totalAmount;
         List<UpiTransactionPacket> packets = new ArrayList<>();
-        
+        BigDecimal remainingAmount = totalAmount;
+
         while (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal packetAmount = remainingAmount.compareTo(OPTIMAL_PACKET_SIZE) > 0 ? OPTIMAL_PACKET_SIZE : remainingAmount;
             
             UpiTransactionPacket packet = UpiTransactionPacket.builder()
-                    .packetUtr(String.format("%012d", 100000000000L + (long)(new Random().nextDouble() * 899999999999L)))
+                    .packetUtr(generateUtr())
                     .amount(packetAmount)
-                    .status("SUCCESS")
                     .parentTransaction(parent)
                     .build();
             
             packets.add(packet);
             remainingAmount = remainingAmount.subtract(packetAmount);
         }
-        
+
         parent.setPackets(packets);
         log.info("Optimized Transfer: Split {} into {} packets to bypass MDR for {}", totalAmount, packets.size(), parentRef);
         return upiParentTransactionRepository.save(parent);
     }
     
+    private String generateUtr() {
+        Random rnd = new Random();
+        StringBuilder sb = new StringBuilder(12);
+        for(int i=0; i < 12; i++) {
+            sb.append(rnd.nextInt(10));
+        }
+        return sb.toString();
+    }
+
     public List<UpiParentTransaction> getInflowsForReceiver(String receiverId) {
         return upiParentTransactionRepository.findByReceiverIdOrderByCreatedAtDesc(receiverId);
     }
