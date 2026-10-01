@@ -8,4 +8,6 @@ import java.util.UUID;
 public interface UpiParentTransactionRepository extends JpaRepository<UpiParentTransaction, UUID> {
     List<UpiParentTransaction> findByReceiverIdOrderByCreatedAtDesc(String receiverId);
     List<UpiParentTransaction> findBySenderIdOrderByCreatedAtDesc(String senderId);
+    List<UpiParentTransaction> findByReceiverIdInOrderByCreatedAtDesc(List<String> receiverIds);
+    List<UpiParentTransaction> findBySenderIdInOrderByCreatedAtDesc(List<String> senderIds);
 }

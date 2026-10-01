@@ -115,10 +115,26 @@ public class UpiSplitService {
     }
 
     public List<UpiParentTransaction> getInflowsForReceiver(String receiverId) {
-        return upiParentTransactionRepository.findByReceiverIdOrderByCreatedAtDesc(receiverId);
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        ids.add(receiverId);
+        userRepository.findByEmail(receiverId).ifPresent(u -> {
+            if (u.getUpiId() != null) ids.add(u.getUpiId());
+        });
+        userRepository.findByUpiId(receiverId).ifPresent(u -> {
+            ids.add(u.getEmail());
+        });
+        return upiParentTransactionRepository.findByReceiverIdInOrderByCreatedAtDesc(ids);
     }
     
     public List<UpiParentTransaction> getOutflowsForSender(String senderId) {
-        return upiParentTransactionRepository.findBySenderIdOrderByCreatedAtDesc(senderId);
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        ids.add(senderId);
+        userRepository.findByEmail(senderId).ifPresent(u -> {
+            if (u.getUpiId() != null) ids.add(u.getUpiId());
+        });
+        userRepository.findByUpiId(senderId).ifPresent(u -> {
+            ids.add(u.getEmail());
+        });
+        return upiParentTransactionRepository.findBySenderIdInOrderByCreatedAtDesc(ids);
     }
 }

@@ -641,13 +641,37 @@ const TransactionItem = ({ tx }: { tx: any }) => {
   );
 };
 
+const playSuccessSound = () => {
+    try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const playOscillator = (freq, startTime, duration) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime);
+            gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
+            gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + startTime + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + startTime + duration);
+            osc.start(ctx.currentTime + startTime);
+            osc.stop(ctx.currentTime + startTime + duration);
+        };
+        playOscillator(880, 0, 0.2);
+        playOscillator(1108.73, 0.15, 0.4);
+    } catch (e) {}
+};
+
 const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, onComplete: () => void }) => {
     const { user } = useUser();
     const { user: backendUser } = useAuth();
     const [vpa, setVpa] = useState(defaultVpa);
     const [amount, setAmount] = useState('');
     const [status, setStatus] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const [localToast, setLocalToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
     
     // NEW NPCI STATES
     const [verifying, setVerifying] = useState(false);
@@ -681,23 +705,35 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
             const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
             await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
             setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
+            setLocalToast({ msg: `Payment of ?${amount} successful!`, type: 'success' });
+            playSuccessSound();
             onComplete();
             setAmount('');
             setVerifiedName(null);
+            setTimeout(() => setLocalToast(null), 4000);
         } catch (err: any) {
-            if (err.message && err.message.includes("NPCI-U16")) {
+            const errorMsg = err.response?.data?.message || err.message || '';
+            if (errorMsg.includes("NPCI-U16")) {
                 setStatus('RISK_REJECTED');
+                setLocalToast({ msg: 'Payment rejected by NPCI risk engine.', type: 'error' });
+            } else if (errorMsg.includes("INVALID_MPIN")) {
+                setStatus('ERROR');
+                setLocalToast({ msg: 'Authentication Failed: Incorrect MPIN entered.', type: 'error' });
             } else {
                 setStatus('ERROR');
+                setLocalToast({ msg: 'Payment Failed: Invalid UPI ID or Network Error.', type: 'error' });
             }
+            setTimeout(() => setLocalToast(null), 4000);
         } finally {
             setLoading(false);
+            setEnteredMpin('');
         }
     };
 
     return (
       <div className="relative">
-        <form onSubmit={handlePayClick} className="space-y-4">
+        {localToast && <Toast message={localToast.msg} type={localToast.type} onClose={() => setLocalToast(null)} />}
+          <form onSubmit={handlePayClick} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To UPI ID / Number</label>
             <div className="flex gap-2">
@@ -838,9 +874,15 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   useEffect(() => {
     
     const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro';
-    upiApi.getOutflows(email).then(r => {
-      setHistory(r.data.map((tx: any) => ({ ...tx, type: 'OUT' })));
-    }).catch(() => {});
+    Promise.all([
+        upiApi.getInflows(email).catch(() => ({ data: [] })),
+        upiApi.getOutflows(email).catch(() => ({ data: [] }))
+      ]).then(([inRes, outRes]) => {
+        const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
+        const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
+        const valid = [...ins, ...outs].filter(tx => tx.status === 'COMPLETED');
+        setHistory(valid.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      });
   }, [refresh, user, backendUser]);
 
   const contacts = [
