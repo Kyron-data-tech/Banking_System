@@ -844,7 +844,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
         </div>
         
         {/* DESKTOP NAVIGATION SIDEBAR */}
-        <div className="hidden md:flex flex-col gap-2 p-6 flex-1 mt-4">
+        <div className="hidden md:flex flex-col gap-2 p-6 flex-1 mt-4 overflow-y-auto pb-8 scrollbar-hide">
           <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
             <Activity size={24} /> <span className="font-bold text-lg">Payments</span>
           </div>
@@ -861,7 +861,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             <ShieldCheck size={24} /> <span className="font-bold text-lg">API Settings</span>
           </div>
           
-          <div className="mt-auto">
+          <div className="mt-auto pt-6">
              <div className="flex items-center justify-between mt-8 p-4 bg-slate-900/50 rounded-2xl border border-slate-700">
                <div className="flex items-center gap-3">
                   {clerkUser && <UserButton />}
@@ -914,6 +914,27 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
 };
 
 const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
+    const [balanceVisible, setBalanceVisible] = useState(false);
+    const [checkingBalance, setCheckingBalance] = useState(false);
+    const [showBalanceModal, setShowBalanceModal] = useState(false);
+    const [balanceMpin, setBalanceMpin] = useState('');
+    const [balanceError, setBalanceError] = useState('');
+
+    const handleCheckBalance = () => {
+        if (!balanceMpin || balanceMpin.length !== 6) {
+            setBalanceError('Please enter a valid 6-digit MPIN');
+            return;
+        }
+        setCheckingBalance(true);
+        setBalanceError('');
+        setTimeout(() => {
+            setCheckingBalance(false);
+            setShowBalanceModal(false);
+            setBalanceVisible(true);
+            setBalanceMpin('');
+        }, 1500); // simulate network verification
+    };
+
   const { user } = useUser();
   const { user: backendUser } = useAuth();
   const [activeTab, setActiveTab] = useState('pay');
@@ -951,16 +972,60 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
             <div className="relative z-10 flex justify-between items-center">
               <div>
                 <p className="text-blue-100 text-sm font-medium mb-1">Available Balance</p>
-                <h2 className="text-4xl font-extrabold tracking-tight">,124,500<span className="text-lg text-blue-200">.00</span></h2>
-                <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
-                  <Activity size={12} /> Updated Just Now
-                </p>
+                {balanceVisible ? (
+                  <>
+                    <h2 className="text-4xl font-extrabold tracking-tight">?124,500<span className="text-lg text-blue-200">.00</span></h2>
+                    <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
+                      <Activity size={12} /> Updated Just Now
+                    </p>
+                  </>
+                ) : (
+                  <div className="mt-2">
+                    <button onClick={() => setShowBalanceModal(true)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm border border-white/20">
+                      <ShieldCheck size={16} /> Check Balance
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-inner">
                 <CreditCard size={24} className="text-white" />
               </div>
             </div>
           </div>
+          
+          <Modal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} title="Check Bank Balance">
+            <div className="text-center">
+               <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <ShieldCheck size={32} />
+               </div>
+               <h3 className="font-bold text-slate-800 text-lg mb-2">Enter UPI PIN</h3>
+               <p className="text-slate-500 text-sm mb-6">Enter your 6-digit MPIN to securely view your account balance.</p>
+               
+               {balanceError && <p className="text-red-500 text-sm mb-4 bg-red-50 p-2 rounded-lg">{balanceError}</p>}
+               
+               <input 
+                 type="password" 
+                 maxLength={6} 
+                 pattern="[0-9]{6}" 
+                 value={balanceMpin} 
+                 onChange={e => setBalanceMpin(e.target.value)} 
+                 placeholder="------" 
+                 className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-center tracking-[1em] text-2xl font-bold outline-none mb-6 focus:ring-2 focus:ring-blue-500" 
+               />
+               
+               <button 
+                 onClick={handleCheckBalance} 
+                 disabled={checkingBalance || balanceMpin.length !== 6} 
+                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-md disabled:opacity-70"
+               >
+                 {checkingBalance ? (
+                    <><Activity className="animate-spin" size={20} /> Verifying PIN...</>
+                 ) : (
+                    'Verify & Check Balance'
+                 )}
+               </button>
+            </div>
+          </Modal>
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
             <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
                <Activity size={16} className="text-blue-600" /> Send Money Instantly
