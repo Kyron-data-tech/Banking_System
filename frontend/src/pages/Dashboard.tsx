@@ -748,7 +748,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
             <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
   placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
           </div>
-          <button disabled={loading || Number(amount) <= 0 || !vpa} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">Proceed to Pay</button>
+          <button disabled={loading || Number(amount) <= 0 || !vpa} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">Proceed to Pay</button>
     
           {status === 'SPLIT_SUCCESS' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2 mt-2">
@@ -813,8 +813,8 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   };
 
   return (
-    <div className="max-w-md mx-auto bg-slate-50 min-h-[90vh] rounded-3xl shadow-lg border border-slate-200 mt-4 overflow-hidden flex flex-col">
-      <div className="bg-purple-700 p-6 text-white text-center rounded-b-3xl shadow-md z-10 relative">
+    <div className="max-w-md mx-auto bg-white/80 backdrop-blur-xl min-h-[90vh] sm:rounded-[40px] shadow-2xl border border-white/40 mt-4 sm:my-8 overflow-hidden flex flex-col animate-slide-up relative z-10">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center rounded-b-[40px] shadow-lg z-10 relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-bold text-lg">{title}</h2>
           <div className="flex items-center gap-3">
@@ -826,8 +826,8 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             )}
           </div>
         </div>
-        <div className="bg-purple-800/50 rounded-xl p-3 border border-purple-600">
-          <p className="text-purple-200 text-xs mb-1">My UPI ID</p>
+        <div className="bg-white/20 rounded-xl p-3 border border-white/30 backdrop-blur-md">
+          <p className="text-blue-100 text-xs mb-1">My UPI ID</p>
           <p className="font-mono text-sm font-bold">{upiId}</p>
         </div>
       </div>
@@ -835,25 +835,25 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       <div className="px-6 -mt-6 relative z-20 mb-4">
         <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-4 grid grid-cols-5 gap-2">
             {title === 'Merchant Business Portal' && (
-              <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('developer')}>
-                <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-purple-600' : 'text-slate-400'} />
+              <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('developer')}>
+                <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
                 <span className="text-[10px] font-bold text-slate-600">Dev</span>
               </div>
             )}
-          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('qr')}>
-            <QrCode size={24} className={activeTab === 'qr' ? 'text-purple-600' : 'text-slate-400'} />
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('qr')}>
+            <QrCode size={24} className={activeTab === 'qr' ? 'text-blue-600' : 'text-slate-400'} />
             <span className="text-[10px] font-bold text-slate-600">QR</span>
           </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('contact')}>
-            <Users size={24} className={activeTab === 'contact' ? 'text-purple-600' : 'text-slate-400'} />
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('contact')}>
+            <Users size={24} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
             <span className="text-[10px] font-bold text-slate-600">Contacts</span>
           </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('pay')}>
-            <Activity size={24} className={activeTab === 'pay' ? 'text-purple-600' : 'text-slate-400'} />
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('pay')}>
+            <Activity size={24} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
             <span className="text-[10px] font-bold text-slate-600">Pay</span>
           </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={24} className={activeTab === 'history' ? 'text-purple-600' : 'text-slate-400'} />
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={24} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'} />
             <span className="text-[10px] font-bold text-slate-600">History</span>
           </div>
         </div>
@@ -1113,7 +1113,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} />;
   } else {
     DashboardContent = (
-      <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+      <div className="flex h-screen bg-white/50 backdrop-blur-3xl overflow-hidden font-sans relative z-10">
       <Sidebar page={page} setPage={setPage} open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Topbar page={page} setOpen={setSidebarOpen} />
@@ -1131,7 +1131,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
       {needsOnboarding && (
         <div className="fixed inset-0 bg-slate-900/90 z-[9999] flex flex-col items-center justify-center p-4">
             <div className="bg-white rounded-3xl w-full max-w-md p-8 text-center shadow-2xl">
-                <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4"><ShieldCheck size={32} /></div>
+                <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><ShieldCheck size={32} /></div>
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to KyroPay!</h2>
                 <p className="text-slate-500 mb-6 text-sm">Please set up your secure UPI ID and 6-digit MPIN before you can start making payments.</p>
                 {onboardError && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200 mb-4">{onboardError}</div>}
@@ -1144,7 +1144,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Set 6-Digit MPIN</label>
                         <input required type="password" maxLength={6} pattern="[0-9]{6}" value={newMpin} onChange={e => setNewMpin(e.target.value)} placeholder="------" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-center tracking-[1em] text-lg font-bold outline-none" />
                     </div>
-                    <button disabled={onboardingLoading} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md">
+                    <button disabled={onboardingLoading} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md">
                         {onboardingLoading ? 'Setting up...' : 'Complete Setup'}
                       </button>
                       <button type="button" onClick={() => { signOut(); logout(); window.location.href = '/'; }} className="w-full mt-4 py-3 text-slate-500 font-bold hover:text-slate-800 transition text-sm">

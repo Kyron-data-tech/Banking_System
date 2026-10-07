@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 import Login from './pages/Login';
+import { BackgroundBlobs } from './components/BackgroundBlobs';
 import Dashboard from './pages/Dashboard';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -65,6 +66,7 @@ const AppRoutes = () => {
 function App() {
   return (
     <AuthProvider>
+      <BackgroundBlobs />
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

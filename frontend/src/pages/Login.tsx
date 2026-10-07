@@ -77,12 +77,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Decorative background shapes */}
-      <div className="absolute top-0 left-0 w-full h-96 bg-blue-600 rounded-b-[100px] transform -translate-y-24 scale-110 opacity-10" />
-      <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-      <div className="absolute top-32 -left-32 w-96 h-96 bg-indigo-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-24 left-1/2 w-96 h-96 bg-sky-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative z-10 animate-fade-in">
+      
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
@@ -111,21 +107,21 @@ export default function Login() {
             <button 
               type="button"
               onClick={() => { setPersona('USER'); localStorage.setItem('userType', 'user'); if (isSignedIn) navigate('/dashboard'); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${persona === 'USER' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === '$1' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Normal User
             </button>
             <button 
               type="button"
               onClick={() => { setPersona('MERCHANT'); localStorage.setItem('userType', 'merchant'); if (isSignedIn) navigate('/dashboard'); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${persona === 'MERCHANT' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === '$1' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Merchant
             </button>
             <button 
               type="button"
               onClick={() => { setPersona('EMPLOYEE'); if (isAuthenticated) navigate('/dashboard'); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${persona === 'EMPLOYEE' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === '$1' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Bank Employee
             </button>
