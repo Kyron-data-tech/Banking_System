@@ -106,6 +106,9 @@ public class User implements UserDetails {
     @Column(name = "mpin", length = 100)
     private String mpin;
 
+    @Column(name = "rupay_api_key", length = 255)
+    private String rupayApiKey;
+
     // ---- Role & Status ----
 
     /**

@@ -8,7 +8,8 @@ import Dashboard from './pages/Dashboard';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
-  const { isSignedIn } = useClerkAuth();
+  const { isSignedIn, isLoaded } = useClerkAuth();
+  if (!isLoaded) return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading auth state...</div>;
   return (isAuthenticated || isSignedIn) ? <>{children}</> : <Navigate to="/" replace />;
 };
 

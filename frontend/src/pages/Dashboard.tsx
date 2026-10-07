@@ -748,9 +748,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
             <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
   placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
           </div>
-          <button disabled={loading} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2">
-            Proceed to Pay
-          </button>
+          <button disabled={loading || Number(amount) <= 0 || !vpa} className="w-full py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">Proceed to Pay</button>
     
           {status === 'SPLIT_SUCCESS' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2 mt-2">
@@ -798,9 +796,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
                         <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">ENTER 6-DIGIT UPI PIN</p>
                         <input autoFocus required type="password" maxLength={6} pattern="[0-9]{6}" value={enteredMpin} onChange={e => setEnteredMpin(e.target.value)} placeholder="------" className="w-full bg-transparent text-center tracking-[1em] text-3xl font-bold outline-none text-white placeholder-slate-600" />
                     </div>
-                    <button type="button" onClick={executePayment} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors">
-                        <CheckCircle2 size={24} /> Submit
-                    </button>
+                    <button type="button" onClick={executePayment} disabled={loading || enteredMpin.length !== 6} className={`w-full ${loading || enteredMpin.length !== 6 ? 'bg-emerald-800 text-white/50 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'} font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors`}>{loading ? <><div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Verifying...</> : <><CheckCircle2 size={24} /> Submit</>}</button>
                 </div>
             </div>
         )}
@@ -837,7 +833,13 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       </div>
       
       <div className="px-6 -mt-6 relative z-20 mb-4">
-        <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-4 grid grid-cols-4 gap-2">
+        <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-4 grid grid-cols-5 gap-2">
+            {title === 'Merchant Business Portal' && (
+              <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('developer')}>
+                <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-purple-600' : 'text-slate-400'} />
+                <span className="text-[10px] font-bold text-slate-600">Dev</span>
+              </div>
+            )}
           <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => setActiveTab('qr')}>
             <QrCode size={24} className={activeTab === 'qr' ? 'text-purple-600' : 'text-slate-400'} />
             <span className="text-[10px] font-bold text-slate-600">QR</span>
@@ -984,9 +986,33 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
            <p className="text-slate-500 text-sm">Customer directory synced.</p>
         </div>
       )}
-      {activeTab === 'qr' && (
-        <div className="text-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-4">Store QR Code</h3>
+      {activeTab === 'developer' && (
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center">
+            <h3 className="font-bold text-slate-800 mb-4">Developer Settings</h3>
+            <p className="text-xs text-slate-500 mb-4">Generate RuPay Sandbox API Key for integration.</p>
+            <button onClick={async () => {
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const res = await fetch(`${window.location.protocol}//${window.location.hostname}:8080/api/merchant/keys/generate?email=${backendUser?.email || ''}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const data = await res.json();
+                    if (data.apiKey) {
+                        alert('Generated Key: ' + data.apiKey);
+                    } else {
+                        alert('Error: ' + JSON.stringify(data));
+                    }
+                } catch(e) {
+                    alert('Error generating key');
+                }
+            }} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl mb-4 transition">Generate RuPay Key</button>
+            <p className="text-xs text-slate-500">Store this securely. Do not expose it in frontend code.</p>
+          </div>
+        )}
+        {activeTab === 'qr' && (
+          <div className="text-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 className="font-bold text-slate-800 mb-4">Store QR Code</h3>
           <QRCodeSVG value={`upi://pay?pa=${user?.primaryEmailAddress?.emailAddress || backendUser?.email}&pn=Merchant`} size={150} className="mx-auto mb-4"/>
           <p className="text-xs font-bold text-slate-500 mt-4">Print this QR for your shop counter.</p>
         </div>
@@ -1005,7 +1031,7 @@ const Dashboard = () => {
   
   // THREE-TIER ROUTING LOGIC
   const email = clerkUser?.primaryEmailAddress?.emailAddress || backendUser?.email || '';
-  const isMerchant = email.toLowerCase().includes('merchant');
+  const isMerchant = localStorage.getItem('userType') === 'merchant' || email.toLowerCase().includes('merchant');
   const isBankEmployee = !!backendUser && !isMerchant;
   
   

@@ -100,7 +100,9 @@ public class SecurityConfig {
                     "/v3/api-docs/**",        // OpenAPI JSON spec
                     "/actuator/health",       // Health check (for load balancers)
                     "/login/oauth2/**",       // Google OAuth2 callback URL
-                    "/oauth2/**"              // OAuth2 authorization URL
+                    "/oauth2/**",             // OAuth2 authorization URL
+                    "/api/gateway/v1/**",     // RuPay Gateway Sandbox
+                    "/api/merchant/keys/generate" // Allow demo key gen for OAuth users
                 ).permitAll()
 
                 // BANK ADMIN ONLY endpoints

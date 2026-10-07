@@ -17,4 +17,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByStatus(UserStatus status);
     Optional<User> findByEmployeeId(String employeeId);
     Optional<User> findByUpiId(String upiId);
+    Optional<User> findByRupayApiKey(String apiKey);
 }
