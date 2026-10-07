@@ -18,7 +18,7 @@ let toastTimeout: any;
 const Toast = ({ message, type, onClose }: any) => {
   if (!message) return null;
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-fade-in-up">
+    <div className="fixed bottom-6 right-6 z-[9999] animate-fade-in-up">
       <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-xl text-white ${type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-emerald-600' : 'bg-slate-900'}`}>
         {type === 'success' ? <CheckCircle2 size={20} /> : type === 'error' ? <AlertTriangle size={20} /> : <Activity size={20} />}
         <span className="font-medium text-sm">{message}</span>
@@ -698,12 +698,12 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
     };
 
     const executePayment = async () => {
-        setShowMpin(false);
         setLoading(true);
         setStatus(null);
         try {
             const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
             await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
+            setShowMpin(false);
             setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
             setLocalToast({ msg: `Payment of ?${amount} successful!`, type: 'success' });
             playSuccessSound();
@@ -712,12 +712,12 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
             setVerifiedName(null);
             setTimeout(() => setLocalToast(null), 4000);
         } catch (err: any) {
-            const errorMsg = err.response?.data?.message || err.message || '';
-            if (errorMsg.includes("NPCI-U16")) {
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || '';
+            if (errorMsg.includes("NPCI-U16") || errorMsg.includes("Risk Threshold")) {
                 setStatus('RISK_REJECTED');
                 setLocalToast({ msg: 'Payment rejected by NPCI risk engine.', type: 'error' });
-            } else if (errorMsg.includes("INVALID_MPIN")) {
-                setStatus('ERROR');
+            } else if (errorMsg.includes("INVALID_MPIN") || errorMsg.includes("Incorrect MPIN")) {
+                setStatus(null); // Clear error status to allow retry
                 setLocalToast({ msg: 'Authentication Failed: Incorrect MPIN entered.', type: 'error' });
             } else {
                 setStatus('ERROR');
@@ -798,7 +798,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
                         <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">ENTER 6-DIGIT UPI PIN</p>
                         <input autoFocus required type="password" maxLength={6} pattern="[0-9]{6}" value={enteredMpin} onChange={e => setEnteredMpin(e.target.value)} placeholder="------" className="w-full bg-transparent text-center tracking-[1em] text-3xl font-bold outline-none text-white placeholder-slate-600" />
                     </div>
-                    <button onClick={executePayment} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors">
+                    <button type="button" onClick={executePayment} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors">
                         <CheckCircle2 size={24} /> Submit
                     </button>
                 </div>
@@ -880,7 +880,10 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
       ]).then(([inRes, outRes]) => {
         const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
         const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
-        const valid = [...ins, ...outs].filter(tx => tx.status === 'COMPLETED');
+        
+          const allTxs = [...outs, ...ins];
+          const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
+          const valid = uniqueTxs.filter((tx: any) => tx.status === 'COMPLETED');
         setHistory(valid.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       });
   }, [refresh, user, backendUser]);
@@ -941,7 +944,9 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         ]).then(([inRes, outRes]) => {
           const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
           const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
-          const all = [...ins, ...outs].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const allTxs = [...outs, ...ins]; // Prefer OUT if same id
+            const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
+            const all = uniqueTxs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           
           setHistory(prev => {
               if (prev.length > 0 && all.length > 0 && all[0].id !== prev[0].id && all[0].type === 'IN') {

@@ -63,7 +63,7 @@ public class UpiController {
             ));
         } catch(Exception e) {
             if (e.getMessage().equals("INVALID_MPIN")) {
-                return ResponseEntity.status(401).body(Map.of("error", "Incorrect MPIN"));
+                return ResponseEntity.status(400).body(Map.of("error", "Incorrect MPIN"));
             }
             if (e.getMessage().contains("NPCI-U16")) {
                 return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
