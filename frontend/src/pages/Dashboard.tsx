@@ -813,36 +813,87 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white/80 backdrop-blur-xl min-h-[90vh] sm:rounded-[40px] shadow-2xl border border-white/40 mt-4 sm:my-8 overflow-hidden flex flex-col animate-slide-up relative z-10">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center rounded-b-[40px] shadow-lg z-10 relative">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-bold text-lg">{title}</h2>
-          <div className="flex items-center gap-3">
-            {clerkUser && <UserButton />}
-            {backendUser && (
-              <button onClick={handleLogout} className="p-2 bg-purple-800 rounded-full hover:bg-purple-900 transition-colors" title="Logout">
-                <LogOut size={16} />
-              </button>
-            )}
+    <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 backdrop-blur-xl min-h-[100vh] md:min-h-[85vh] md:rounded-[40px] shadow-2xl border border-white/40 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10">
+      
+      {/* LEFT PANEL: Mobile Header / Desktop Sidebar */}
+      <div className="md:w-80 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col relative z-20 shadow-2xl">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 md:p-8 text-white rounded-b-[40px] md:rounded-b-none md:rounded-br-[40px] shadow-lg relative z-10">
+          <div className="flex justify-between md:justify-center items-center mb-4 md:mb-6">
+            <h2 className="font-bold text-lg md:text-2xl">{title}</h2>
+            <div className="flex md:hidden items-center gap-3">
+              {clerkUser && <UserButton />}
+              {backendUser && (
+                <button onClick={handleLogout} className="text-white hover:text-blue-200">
+                  <LogOut size={20} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 md:w-24 md:h-24 bg-white rounded-full flex items-center justify-center shadow-inner mb-3">
+              <span className="text-blue-600 font-extrabold text-2xl md:text-4xl">
+                {(backendUser?.fullName || clerkUser?.fullName || 'K').charAt(0)}
+              </span>
+            </div>
+            <p className="font-bold text-white md:text-xl">{backendUser?.fullName || clerkUser?.fullName || 'Kyro User'}</p>
+            <div className="mt-2 bg-white/20 rounded-xl p-2 border border-white/30 backdrop-blur-md">
+              <p className="text-xs text-blue-100 uppercase font-bold tracking-wider mb-0.5 text-center">Your UPI ID</p>
+              <p className="text-sm font-bold truncate px-2">{upiId}</p>
+            </div>
           </div>
         </div>
-        <div className="bg-white/20 rounded-xl p-3 border border-white/30 backdrop-blur-md">
-          <p className="text-blue-100 text-xs mb-1">My UPI ID</p>
-          <p className="font-mono text-sm font-bold">{upiId}</p>
+        
+        {/* DESKTOP NAVIGATION SIDEBAR */}
+        <div className="hidden md:flex flex-col gap-2 p-6 flex-1 mt-4">
+          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
+            <Activity size={24} /> <span className="font-bold text-lg">Payments</span>
+          </div>
+          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={24} /> <span className="font-bold text-lg">Transaction History</span>
+          </div>
+          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
+            <Users size={24} /> <span className="font-bold text-lg">Contacts & Split</span>
+          </div>
+          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'qr' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('qr')}>
+            <QrCode size={24} /> <span className="font-bold text-lg">My QR Code</span>
+          </div>
+          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
+            <ShieldCheck size={24} /> <span className="font-bold text-lg">API Settings</span>
+          </div>
+          
+          <div className="mt-auto">
+             <div className="flex items-center justify-between mt-8 p-4 bg-slate-900/50 rounded-2xl border border-slate-700">
+               <div className="flex items-center gap-3">
+                  {clerkUser && <UserButton />}
+                  <span className="text-xs text-slate-400 font-bold">Account</span>
+               </div>
+               {backendUser && (
+                <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 transition">
+                  <LogOut size={20} />
+                </button>
+               )}
+             </div>
+          </div>
         </div>
       </div>
       
-      <div className="px-6 -mt-6 relative z-20 mb-4">
-        <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-4 grid grid-cols-5 gap-2">
-            {title === 'Merchant Business Portal' && (
-              <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('developer')}>
-                <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
-                <span className="text-[10px] font-bold text-slate-600">Dev</span>
-              </div>
-            )}
+      {/* MAIN CONTENT AREA */}
+      <div className="p-6 pt-6 md:p-10 flex-1 overflow-y-auto bg-slate-50/50 relative">
+        <div className="max-w-2xl mx-auto">
+          {children}
+        </div>
+      </div>
+      
+      {/* MOBILE BOTTOM NAV */}
+      <div className="md:hidden bg-white border-t border-slate-200 p-4 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20">
+        <div className="flex justify-between px-2">
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('developer')}>
+            <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className="text-[10px] font-bold text-slate-600">Dev</span>
+          </div>
           <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('qr')}>
             <QrCode size={24} className={activeTab === 'qr' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">QR</span>
+            <span className="text-[10px] font-bold text-slate-600">QR Code</span>
           </div>
           <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('contact')}>
             <Users size={24} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
@@ -857,10 +908,6 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             <span className="text-[10px] font-bold text-slate-600">History</span>
           </div>
         </div>
-      </div>
-      
-      <div className="p-6 pt-0 flex-1 overflow-y-auto">
-        {children}
       </div>
     </div>
   );
@@ -896,10 +943,33 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   return (
     <MobileDashboardLayout title="Normal User" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+        <div className="animate-fade-in">
+
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl mb-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-400/20 rounded-full blur-xl transform -translate-x-5 translate-y-5" />
+            <div className="relative z-10 flex justify-between items-center">
+              <div>
+                <p className="text-blue-100 text-sm font-medium mb-1">Available Balance</p>
+                <h2 className="text-4xl font-extrabold tracking-tight">,124,500<span className="text-lg text-blue-200">.00</span></h2>
+                <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
+                  <Activity size={12} /> Updated Just Now
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-inner">
+                <CreditCard size={24} className="text-white" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+               <Activity size={16} className="text-blue-600" /> Send Money Instantly
+            </h3>
+
+            <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+          </div>
         </div>
-      )}
+      )}}
       {activeTab === 'history' && (
         <div>
           <h3 className="font-bold text-slate-800 mb-4">Payment History</h3>
@@ -969,11 +1039,43 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
       <MobileDashboardLayout title="Merchant Business Portal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-4 text-sm">Vendor Payouts (Smart Split)</h3>
-          <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+        <div className="animate-fade-in">
+
+          <div className="bg-gradient-to-br from-indigo-700 to-purple-800 rounded-3xl p-6 text-white shadow-2xl mb-6 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-indigo-200 text-sm font-medium mb-1">Today's Collections</p>
+                  <h2 className="text-4xl font-extrabold tracking-tight">,34,250<span className="text-lg text-indigo-300">.00</span></h2>
+                </div>
+                <div className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                  <TrendingUp size={12} /> +14.5%
+                </div>
+              </div>
+              
+              <div className="flex gap-4 mt-6">
+                <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                  <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Transactions</p>
+                  <p className="font-bold text-lg">142</p>
+                </div>
+                <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
+                  <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Settlements</p>
+                  <p className="font-bold text-lg text-emerald-400">Clear</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
+            <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+               <Layers size={16} className="text-indigo-600" /> Vendor Payouts (Smart Split)
+            </h3>
+
+            <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+          </div>
         </div>
-      )}
+      )}}
       {activeTab === 'history' && (
         <div>
           <h3 className="font-bold text-slate-800 mb-4">Customer Inflows</h3>
