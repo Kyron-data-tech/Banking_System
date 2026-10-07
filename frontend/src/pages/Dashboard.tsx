@@ -969,7 +969,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
             <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
           </div>
         </div>
-      )}}
+      )}
       {activeTab === 'history' && (
         <div>
           <h3 className="font-bold text-slate-800 mb-4">Payment History</h3>
@@ -1075,7 +1075,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
             <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
           </div>
         </div>
-      )}}
+      )}
       {activeTab === 'history' && (
         <div>
           <h3 className="font-bold text-slate-800 mb-4">Customer Inflows</h3>

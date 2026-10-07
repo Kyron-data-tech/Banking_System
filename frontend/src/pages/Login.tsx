@@ -107,21 +107,21 @@ export default function Login() {
             <button 
               type="button"
               onClick={() => { setPersona('USER'); localStorage.setItem('userType', 'user'); if (isSignedIn) navigate('/dashboard'); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === '$1' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === 'USER' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Normal User
             </button>
             <button 
               type="button"
               onClick={() => { setPersona('MERCHANT'); localStorage.setItem('userType', 'merchant'); if (isSignedIn) navigate('/dashboard'); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === '$1' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === 'USER' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Merchant
             </button>
             <button 
               type="button"
               onClick={() => { setPersona('EMPLOYEE'); if (isAuthenticated) navigate('/dashboard'); }}
-              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === '$1' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+              className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === 'USER' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
               Bank Employee
             </button>
