@@ -883,7 +883,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
         const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
         
-          const allTxs = [...outs, ...ins];
+          const allTxs = [...ins, ...outs]; // Prefer OUT if same id
           const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
           const valid = uniqueTxs.filter((tx: any) => tx.status === 'COMPLETED');
         setHistory(valid.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -946,7 +946,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         ]).then(([inRes, outRes]) => {
           const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
           const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
-          const allTxs = [...outs, ...ins]; // Prefer OUT if same id
+          const allTxs = [...ins, ...outs]; // Prefer OUT if same id // Prefer OUT if same id
             const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
             const all = uniqueTxs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           
