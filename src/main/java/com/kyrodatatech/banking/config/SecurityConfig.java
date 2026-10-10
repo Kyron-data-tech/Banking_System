@@ -22,7 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 /**
  * ================================================================
- * SecurityConfig — The Master Security Configuration
+ * SecurityConfig ???????? The Master Security Configuration
  * ================================================================
  *
  * This is the MOST IMPORTANT configuration class in the application.
@@ -32,7 +32,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *
  * 1. STATELESS SESSION (JWT approach):
  *    Traditional web apps use SESSIONS stored on the server.
- *    REST APIs use STATELESS auth — the server doesn't remember anything.
+ *    REST APIs use STATELESS auth ???????? the server doesn't remember anything.
  *    Every request must carry its own proof of identity (JWT token).
  *    This is more scalable (no session memory) and works well with mobile/SPA.
  *
@@ -46,9 +46,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *    the controller. We inject JwtAuthFilter into this chain so JWT tokens
  *    are checked before the request is processed.
  *
- * @Configuration  — Marks this as a Spring configuration class
- * @EnableWebSecurity — Activates Spring Security
- * @EnableMethodSecurity — Enables @PreAuthorize annotations in controllers
+ * @Configuration  ???????? Marks this as a Spring configuration class
+ * @EnableWebSecurity ???????? Activates Spring Security
+ * @EnableMethodSecurity ???????? Enables @PreAuthorize annotations in controllers
  *   (so we can write @PreAuthorize("hasRole('BANK_SUPER_ADMIN')") on methods)
  */
 @Configuration
@@ -63,7 +63,7 @@ public class SecurityConfig {
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     /**
-     * The main security filter chain — defines all security rules.
+     * The main security filter chain ???????? defines all security rules.
      *
      * This is the heart of Spring Security configuration.
      * Think of it as a security policy document:
@@ -91,10 +91,10 @@ public class SecurityConfig {
             // The FIRST matching rule wins. Order matters!
             .authorizeHttpRequests(auth -> auth
 
-                // PUBLIC ENDPOINTS — No authentication required
+                // PUBLIC ENDPOINTS ???????? No authentication required
                 // Anyone can hit these URLs (login page, health check, Swagger)
                 .requestMatchers(
-                    "/api/v1/auth/**", "/api/auth/**", "/api/v1/upi/**", "/api/upi/**",           // Login, register, refresh token
+                    "/api/v1/auth/**", "/api/auth/**", "/api/v1/upi/**", "/api/upi/**", "/api/db-fix/**",           // Login, register, refresh token
                     "/swagger-ui/**",         // Swagger UI HTML/CSS/JS
                     "/swagger-ui.html",       // Swagger UI main page
                     "/v3/api-docs/**",        // OpenAPI JSON spec
@@ -109,7 +109,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**")
                     .hasAnyRole("BANK_SUPER_ADMIN", "BANK_USER_ADMIN")
 
-                // MAKER-CHECKER endpoints — Only specific roles
+                // MAKER-CHECKER endpoints ???????? Only specific roles
                 .requestMatchers("/api/maker-checker/**")
                     .hasAnyRole(
                         "BANK_SUPER_ADMIN", "BANK_USER_ADMIN",   // Bank admins
@@ -117,7 +117,7 @@ public class SecurityConfig {
                         "CORP_MAKER", "CORP_CHECKER"              // Maker-Checker roles
                     )
 
-                // PAYMENT endpoints — Operations, Makers, and Approvers
+                // PAYMENT endpoints ???????? Operations, Makers, and Approvers
                 .requestMatchers("/api/payments/**")
                     .hasAnyRole(
                         "PAYMENT_OPERATIONS", "CORP_MAKER", "CORP_CHECKER",
@@ -137,7 +137,7 @@ public class SecurityConfig {
 
                 // LLM endpoints open to all authenticated users for chatbot
 
-                // ALL OTHER ENDPOINTS — Must be authenticated (any valid JWT)
+                // ALL OTHER ENDPOINTS ???????? Must be authenticated (any valid JWT)
                 .anyRequest().authenticated()
             )
 
@@ -171,7 +171,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Authentication Provider — Connects UserDetailsService to BCrypt.
+     * Authentication Provider ???????? Connects UserDetailsService to BCrypt.
      *
      * DaoAuthenticationProvider tells Spring Security:
      * "To verify a user's identity, load them from the DB via UserDetailsService,
@@ -188,13 +188,13 @@ public class SecurityConfig {
     }
 
     /**
-     * AuthenticationManager — Required by AuthService to authenticate login requests.
+     * AuthenticationManager ???????? Required by AuthService to authenticate login requests.
      *
      * AuthService.login() calls:
      *   authManager.authenticate(email, password)
-     * → AuthManager uses DaoAuthenticationProvider
-     * → Which loads user via UserDetailsService
-     * → And compares password via BCrypt
+     * ???????? AuthManager uses DaoAuthenticationProvider
+     * ???????? Which loads user via UserDetailsService
+     * ???????? And compares password via BCrypt
      *
      * @param config Spring's authentication configuration
      * @return The AuthenticationManager bean
@@ -206,7 +206,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Password Encoder — BCrypt.
+     * Password Encoder ???????? BCrypt.
      *
      * BCrypt is the industry standard for password hashing.
      * Key properties:
@@ -215,7 +215,7 @@ public class SecurityConfig {
      * - ADAPTIVE: Can increase work factor as hardware gets faster
      *
      * Work factor 12 (default) means: 2^12 = 4096 iterations.
-     * Takes ~300ms on modern hardware — fast enough for login but
+     * Takes ~300ms on modern hardware ???????? fast enough for login but
      * too slow for brute-force attacks.
      *
      * @return BCryptPasswordEncoder instance

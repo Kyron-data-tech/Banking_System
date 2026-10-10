@@ -1,7 +1,7 @@
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
-  LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
+  Search, ArrowDownLeft, ArrowUpRight, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
   LogOut, Banknote, Archive, Layers, Bot, ChevronRight,
   TrendingUp, Clock, AlertTriangle, CheckCircle2, XCircle,
   Menu, X, Bell, Plus, Download, QrCode
@@ -11,7 +11,7 @@ import { userApi, transactionApi, makerCheckerApi, paymentApi, llmApi, authApi, 
 import { History as HistoryIcon, ChevronDown } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
-// ─── Types & Global UI State ──────────────────────────────────────────────────
+// â”€â”€â”€ Types & Global UI State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type Page = 'dashboard' | 'users' | 'transactions' | 'approvals' | 'payments' | 'collections' | 'liquidity' | 'llm';
 
 let toastTimeout: any;
@@ -35,7 +35,7 @@ const Modal = ({ isOpen, onClose, title, children }: any) => {
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="font-bold text-lg text-slate-800">{title}</h3>
+          <h3 className="font-bold text-base text-slate-800">{title}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1"><X size={20} /></button>
         </div>
         <div className="p-6">{children}</div>
@@ -44,7 +44,7 @@ const Modal = ({ isOpen, onClose, title, children }: any) => {
   );
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const statusBadge: Record<string, string> = {
   ACTIVE:           'bg-emerald-100 text-emerald-700',
   PENDING_APPROVAL: 'bg-amber-100 text-amber-700',
@@ -66,7 +66,7 @@ const roleBadge = (role: string) => {
 const formatRole = (role: string) =>
   role.replace('ROLE_', '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
-// ─── Sidebar & Topbar ────────────────────────────────────────────────────────
+// â”€â”€â”€ Sidebar & Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const navItems = [
   { id: 'dashboard',    label: 'Dashboard',       icon: LayoutDashboard },
   { id: 'users',        label: 'User Management', icon: Users },
@@ -114,7 +114,7 @@ const Sidebar = ({ page, setPage, open, setOpen }: any) => {
             </div>
           </div>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto no-scrollbar">
           {navItems.filter(item => {
             if (item.id === 'users') return canManageUsers(roles);
             if (item.id === 'approvals') return canReviewApprovals(roles);
@@ -154,7 +154,7 @@ const Topbar = ({ page, setOpen }: any) => {
   );
 };
 
-// ─── Page Components ────────────────────────────────────────────────────────
+// â”€â”€â”€ Page Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const DashboardPage = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -164,7 +164,7 @@ const DashboardPage = () => {
     <div className="p-6 space-y-6">
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 text-white shadow-md">
         <p className="text-blue-200 text-sm mb-1">Welcome back,</p>
-        <h2 className="text-2xl font-bold">{user?.fullName} 👋</h2>
+        <h2 className="text-2xl font-bold">{user?.fullName} ðŸ‘‹</h2>
         <p className="text-blue-200 text-sm mt-1">Role: {formatRole(user?.roles?.[0] ?? '')}</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -224,7 +224,7 @@ const UsersPage = ({ showToast }: any) => {
           </button>
         </div>
         {loading ? (
-          <div className="p-12 text-center text-slate-400">Loading from database…</div>
+          <div className="p-12 text-center text-slate-400">Loading from databaseâ€¦</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
@@ -590,7 +590,7 @@ const LlmPage = ({ showToast }: any) => {
   );
 };
 
-// ─── Main App Layout ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Main App Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // --------------------------------------------------------------------------------
 // NEW HACKATHON DASHBOARDS: Normal User (Sender) & Merchant (Receiver/Sender)
@@ -627,7 +627,7 @@ const TransactionItem = ({ tx }: { tx: any }) => {
             <Bot size={16} className="text-blue-600"/>
             <p className="text-xs font-bold text-blue-800">Smart Split Applied: {tx.packets.length} Packets</p>
           </div>
-          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+          <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar pr-2">
             {tx.packets.map((p: any, i: number) => (
               <div key={i} className="flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm text-xs">
                 <span className="font-mono text-slate-500">{p.packetUtr}</span>
@@ -813,13 +813,13 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   };
 
   return (
-    <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 backdrop-blur-xl h-[100dvh] md:h-[85vh] md:rounded-[40px] shadow-2xl border border-white/40 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10">
+    <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[700px] md:rounded-[40px] shadow-2xl border border-white/40 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10">
       
       {/* LEFT PANEL: Mobile Header / Desktop Sidebar */}
       <div className="md:w-80 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col relative z-20 shadow-2xl">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 md:p-8 text-white rounded-b-[40px] md:rounded-b-none md:rounded-br-[40px] shadow-lg relative z-10">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white rounded-b-[40px] md:rounded-b-none md:rounded-br-[40px] shadow-lg relative z-10">
           <div className="flex justify-between md:justify-center items-center mb-4 md:mb-6">
-            <h2 className="font-bold text-lg md:text-2xl">{title}</h2>
+            <h2 className="font-bold text-base md:text-2xl">{title}</h2>
             <div className="flex md:hidden items-center gap-3">
               {clerkUser && <UserButton />}
               {backendUser && (
@@ -830,7 +830,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 md:w-24 md:h-24 bg-white rounded-full flex items-center justify-center shadow-inner mb-3">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-inner mb-3">
               <span className="text-blue-600 font-extrabold text-2xl md:text-4xl">
                 {(backendUser?.fullName || clerkUser?.fullName || 'K').charAt(0)}
               </span>
@@ -844,21 +844,21 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
         </div>
         
         {/* DESKTOP NAVIGATION SIDEBAR */}
-        <div className="hidden md:flex flex-col gap-2 p-6 flex-1 mt-4 overflow-y-auto pb-8 scrollbar-hide">
-          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
-            <Activity size={24} /> <span className="font-bold text-lg">Payments</span>
+        <div className="hidden md:flex flex-col gap-1.5 p-4 flex-1 mt-4 overflow-y-auto no-scrollbar pb-8 scrollbar-hide">
+          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
+            <Activity size={24} /> <span className="font-bold text-base">Payments</span>
           </div>
-          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={24} /> <span className="font-bold text-lg">Transaction History</span>
+          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={24} /> <span className="font-bold text-base">Transaction History</span>
           </div>
-          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
-            <Users size={24} /> <span className="font-bold text-lg">Contacts & Split</span>
+          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
+            <Users size={24} /> <span className="font-bold text-base">Contacts & Split</span>
           </div>
-          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'qr' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('qr')}>
-            <QrCode size={24} /> <span className="font-bold text-lg">My QR Code</span>
+          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'qr' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('qr')}>
+            <QrCode size={24} /> <span className="font-bold text-base">My QR Code</span>
           </div>
-          <div className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
-            <ShieldCheck size={24} /> <span className="font-bold text-lg">API Settings</span>
+          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
+            <ShieldCheck size={24} /> <span className="font-bold text-base">API Settings</span>
           </div>
           
           <div className="mt-auto pt-6">
@@ -878,7 +878,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       </div>
       
       {/* MAIN CONTENT AREA */}
-      <div className="p-6 pt-6 md:p-10 flex-1 overflow-y-auto bg-slate-50/50 relative">
+      <div className="p-6 pt-6 md:p-10 flex-1 overflow-y-auto no-scrollbar bg-slate-50/50 relative">
         <div className="max-w-2xl mx-auto">
           {children}
         </div>
@@ -1173,11 +1173,11 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
               <div className="flex gap-4 mt-6">
                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
                   <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Transactions</p>
-                  <p className="font-bold text-lg">{txCount}</p>
+                  <p className="font-bold text-base">{txCount}</p>
                 </div>
                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
                   <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Settlements</p>
-                  <p className="font-bold text-lg text-emerald-400">Clear</p>
+                  <p className="font-bold text-base text-emerald-400">Clear</p>
                 </div>
               </div>
             </div>
@@ -1234,8 +1234,50 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         </div>
       )}
       {activeTab === 'contact' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-           <p className="text-slate-500 text-sm">Customer directory synced.</p>
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-slate-800 text-lg">Customer Directory</h3>
+            <button className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-blue-200 transition" onClick={() => setActiveTab('pay')}>
+              <Users size={16} /> Sync
+            </button>
+          </div>
+          
+          <div className="bg-white p-2 flex items-center gap-2 rounded-xl border border-slate-200 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
+            <Search size={18} className="text-slate-400 ml-2" />
+            <input type="text" placeholder="Search by name or UPI ID..." className="flex-1 p-2 outline-none text-sm" />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Recent Customers</p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {Array.from(new Set(history.map(tx => tx.type === 'IN' ? tx.senderId : tx.receiverId))).filter(Boolean).map((id, i) => (
+                <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer" onClick={() => setActiveTab('history')}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg">
+                      {String(id).charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800 text-sm truncate max-w-[180px]">{String(id)}</p>
+                      <p className="text-xs text-slate-500">Customer</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                     <button className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Request Payment" onClick={(e) => {e.stopPropagation(); setActiveTab('pay')}}>
+                       <ArrowDownLeft size={16} />
+                     </button>
+                  </div>
+                </div>
+              ))}
+              {history.length === 0 && (
+                <div className="p-8 text-center text-slate-500">
+                  <Users size={32} className="mx-auto mb-2 text-slate-300" />
+                  <p className="text-sm font-medium">No customers yet</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
       {activeTab === 'developer' && (
@@ -1369,7 +1411,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
       <Sidebar page={page} setPage={setPage} open={sidebarOpen} setOpen={setSidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Topbar page={page} setOpen={setSidebarOpen} />
-        <main className="flex-1 overflow-y-auto">{renderPage()}</main>
+        <main className="flex-1 overflow-y-auto no-scrollbar">{renderPage()}</main>
         {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       </div>
     </div>
