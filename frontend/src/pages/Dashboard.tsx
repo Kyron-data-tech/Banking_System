@@ -1,13 +1,13 @@
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
-  Search, ArrowDownLeft, ArrowUpRight, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
-  LogOut, Banknote, Archive, Layers, Bot, ChevronRight,
-  TrendingUp, Clock, AlertTriangle, CheckCircle2, XCircle,
-  Menu, X, Bell, Plus, Download, QrCode
+  Search, ArrowDownLeft, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
+  LogOut, Banknote, Archive, Layers, Bot,
+  TrendingUp, AlertTriangle, CheckCircle2,
+  Menu, X, Bell, Plus, QrCode
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { userApi, transactionApi, makerCheckerApi, paymentApi, llmApi, authApi, upiApi } from '../api';
+import { userApi, paymentApi, llmApi, authApi, upiApi } from '../api';
 import { History as HistoryIcon, ChevronDown } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -646,7 +646,7 @@ const playSuccessSound = () => {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
-        const playOscillator = (freq, startTime, duration) => {
+        const playOscillator = (freq: number, startTime: number, duration: number) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.connect(gain);
@@ -946,8 +946,10 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
     }, [activeTab]);
 
     const totalIn = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
-      const totalOut = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
-      const currentBalance = 100000 + totalIn - totalOut;
+    const totalOut = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
+    const currentBalance = 100000 + totalIn - totalOut;
+
+
       useEffect(() => {
       const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro';
     Promise.all([
@@ -980,7 +982,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                 <p className="text-blue-100 text-sm font-medium mb-1">Available Balance</p>
                 {balanceVisible ? (
                   <>
-                    <h2 className="text-4xl font-extrabold tracking-tight">?{currentBalance.toLocaleString('en-IN')}<span className="text-lg text-blue-200">.00</span></h2>
+                    <h2 className="text-4xl font-extrabold tracking-tight">₹{currentBalance.toLocaleString('en-IN')}<span className="text-lg text-blue-200">.00</span></h2>
                     <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
                       <Activity size={12} /> Updated Just Now
                     </p>
@@ -1110,9 +1112,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         setBalanceVisible(false);
     }, [activeTab]);
 
-    const totalIn = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
-      const totalOut = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
-      const currentBalance = 100000 + totalIn - totalOut;
+    
       useEffect(() => {
       const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'vanshj7818@gmail.com';
     
@@ -1156,7 +1156,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
                 <div>
                   <p className="text-indigo-200 text-sm font-medium mb-1">Total Collections</p>
                     {balanceVisible ? (
-                       <h2 className="text-4xl font-extrabold tracking-tight">?{totalCollections.toLocaleString('en-IN')}<span className="text-lg text-indigo-300">.00</span></h2>
+                       <h2 className="text-4xl font-extrabold tracking-tight">₹{totalCollections.toLocaleString('en-IN')}<span className="text-lg text-indigo-300">.00</span></h2>
                     ) : (
                        <div className="mt-2">
                          <button onClick={() => setShowBalanceModal(true)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm border border-white/20">
@@ -1352,7 +1352,7 @@ const [page, setPage] = useState<Page>('dashboard');
         } else {
           setVerifiedUpiId(res.data.upiId);
         }
-      }).catch(err => {
+      }).catch(() => {
          setNeedsOnboarding(true);
       });
     }

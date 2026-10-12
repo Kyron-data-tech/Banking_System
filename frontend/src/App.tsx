@@ -51,7 +51,7 @@ const AppRoutes = () => {
   const isLoggedIn = isAuthenticated || isSignedIn;
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+      <Route path="/" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/oauth2/callback" element={<OAuthCallback />} />
       <Route path="/dashboard/*" element={
         <ProtectedRoute>

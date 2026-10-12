@@ -16,8 +16,8 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.data && error.response.data.message) {
-        error.message = error.response.data.message;
+    if (error.response && error.response.data && (error.response.data.message || error.response.data.error)) {
+        error.message = error.response.data.message || error.response.data.error;
     } else if (error.response && error.response.data && typeof error.response.data === 'string') {
         error.message = error.response.data;
     }
