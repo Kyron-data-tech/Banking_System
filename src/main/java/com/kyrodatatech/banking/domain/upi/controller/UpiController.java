@@ -79,20 +79,25 @@ public class UpiController {
 
     @GetMapping("/verify-vpa")
     public ResponseEntity<?> verifyVpa(@RequestParam String vpa) {
-        User user = userRepository.findByUpiId(vpa).orElse(null);
-        String name = user != null ? user.getFullName() : vpa.split("@")[0];
+        if (vpa == null || !vpa.contains("@")) {
+            return ResponseEntity.status(404).body(Map.of("error", "Invalid UPI ID. Format must be name@handle."));
+        }
 
-        if (name.length() > 2) {
-            name = name.substring(0, 1).toUpperCase() + "****" + name.substring(name.length() - 1).toLowerCase();
+        User user = userRepository.findByUpiId(vpa)
+                .or(() -> userRepository.findByEmail(vpa))
+                .orElse(null);
+
+        String name;
+        if (user != null) {
+            name = user.getFullName();
         } else {
-            name = "V****r";
+            String prefix = vpa.split("@")[0];
+            String handle = vpa.split("@")[1].toUpperCase();
+            name = prefix.substring(0, 1).toUpperCase() + prefix.substring(1) + " (" + handle + ")";
         }
-        try { Thread.sleep(800); } catch (Exception e) {} // Simulate VPA lookup latency
-        
-        if (user == null && !vpa.contains("@example.com") && !vpa.contains("@kyro")) {
-            return ResponseEntity.status(404).body(Map.of("error", "Invalid UPI ID"));
-        }
-        
+
+        try { Thread.sleep(600); } catch (Exception e) {} // Simulate NPCI VPA lookup latency
+
         return ResponseEntity.ok(Map.of(
             "vpa", vpa,
             "verifiedName", name + " (Verified)",

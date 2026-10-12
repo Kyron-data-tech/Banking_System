@@ -1,7 +1,10 @@
+import { QrScannerModal } from '../components/QrScannerModal';
+import type { ScannedUpiPayload } from '../components/QrScannerModal';
+import { UpiQrStandee } from '../components/UpiQrStandee';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
-  Search, ArrowDownLeft, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
+  Camera, Search, ArrowDownLeft, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
   LogOut, Banknote, Archive, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
   Menu, X, Bell, Plus, QrCode
@@ -664,20 +667,46 @@ const playSuccessSound = () => {
     } catch (e) {}
 };
 
-const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, onComplete: () => void }) => {
+const SmartPayForm = ({ 
+  defaultVpa = '', 
+  defaultAmount = '',
+  defaultName = '',
+  onComplete,
+  onOpenScanner
+}: { 
+  defaultVpa?: string, 
+  defaultAmount?: string,
+  defaultName?: string,
+  onComplete: () => void,
+  onOpenScanner?: () => void
+}) => {
     const { user } = useUser();
     const { user: backendUser } = useAuth();
     const [vpa, setVpa] = useState(defaultVpa);
-    const [amount, setAmount] = useState('');
+    const [amount, setAmount] = useState(defaultAmount);
     const [status, setStatus] = useState<string | null>(null);
-      const [loading, setLoading] = useState(false);
-      const [localToast, setLocalToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [localToast, setLocalToast] = useState<{msg: string, type: 'success' | 'error'} | null>(null);
     
     // NEW NPCI STATES
     const [verifying, setVerifying] = useState(false);
-    const [verifiedName, setVerifiedName] = useState<string | null>(null);
+    const [verifiedName, setVerifiedName] = useState<string | null>(defaultName || null);
     const [showMpin, setShowMpin] = useState(false);
     const [enteredMpin, setEnteredMpin] = useState("");
+
+    useEffect(() => {
+      if (defaultVpa) {
+        setVpa(defaultVpa);
+        if (defaultName) {
+          setVerifiedName(defaultName);
+        } else {
+          upiApi.verifyVpa(defaultVpa).then(res => setVerifiedName(res.data.verifiedName)).catch(() => setVerifiedName(null));
+        }
+      }
+      if (defaultAmount) {
+        setAmount(defaultAmount);
+      }
+    }, [defaultVpa, defaultAmount, defaultName]);
 
     const handleVerify = async () => {
         if (!vpa) return;
@@ -705,7 +734,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
             await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
             setShowMpin(false);
             setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
-            setLocalToast({ msg: `Payment of ?${amount} successful!`, type: 'success' });
+            setLocalToast({ msg: `Payment of ₹${amount} successful!`, type: 'success' });
             playSuccessSound();
             onComplete();
             setAmount('');
@@ -717,7 +746,7 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
                 setStatus('RISK_REJECTED');
                 setLocalToast({ msg: 'Payment rejected by NPCI risk engine.', type: 'error' });
             } else if (errorMsg.includes("INVALID_MPIN") || errorMsg.includes("Incorrect MPIN")) {
-                setStatus(null); // Clear error status to allow retry
+                setStatus(null);
                 setLocalToast({ msg: 'Authentication Failed: Incorrect MPIN entered.', type: 'error' });
             } else {
                 setStatus('ERROR');
@@ -733,12 +762,41 @@ const SmartPayForm = ({ defaultVpa = '', onComplete }: { defaultVpa?: string, on
     return (
       <div className="relative">
         {localToast && <Toast message={localToast.msg} type={localToast.type} onClose={() => setLocalToast(null)} />}
-          <form onSubmit={handlePayClick} className="space-y-4">
+        
+        {onOpenScanner && (
+          <div 
+            onClick={onOpenScanner}
+            className="mb-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 p-4 rounded-2xl text-white flex items-center justify-between shadow-lg cursor-pointer transition hover:shadow-xl active:scale-[0.98] border border-white/20"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                <Camera size={22} className="text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-sm tracking-tight">Scan Any UPI QR Code</span>
+                  <span className="bg-emerald-400 text-slate-900 text-[10px] font-black px-1.5 py-0.5 rounded-full uppercase">Instant</span>
+                </div>
+                <p className="text-xs text-blue-100 mt-0.5">Live Camera Scanner & Upload from Gallery</p>
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <QrCode size={16} />
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handlePayClick} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To UPI ID / Number</label>
             <div className="flex gap-2">
-                <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="merchant@example.com" 
-  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" />
+                <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="name@okkyro or 9876543210@ybl" 
+  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium" />
+                {onOpenScanner && (
+                  <button type="button" onClick={onOpenScanner} title="Scan QR Code" className="px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition border border-blue-200 flex items-center justify-center">
+                    <QrCode size={18} />
+                  </button>
+                )}
                 <button type="button" onClick={handleVerify} disabled={verifying} className="px-4 bg-slate-200 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-300 transition-colors">{verifying ? '...' : 'Verify'}</button>
             </div>
             {verifiedName && <p className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1"><CheckCircle2 size={14}/> {verifiedName}</p>}
@@ -914,6 +972,8 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
 };
 
 const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
+    const [showScanner, setShowScanner] = useState(false);
+    const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [balanceVisible, setBalanceVisible] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
     const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -1039,7 +1099,16 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                <Activity size={16} className="text-blue-600" /> Send Money Instantly
             </h3>
 
-            <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+            <SmartPayForm 
+              defaultVpa={scannedPayee?.vpa || ''}
+              defaultAmount={scannedPayee?.amount || ''}
+              defaultName={scannedPayee?.payeeName || ''}
+              onOpenScanner={() => setShowScanner(true)}
+              onComplete={() => {
+                setRefresh(r => r + 1);
+                setScannedPayee(null);
+              }} 
+            />
           </div>
         </div>
       )}
@@ -1061,16 +1130,28 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         </div>
       )}
       {activeTab === 'qr' && (
-        <div className="text-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <QRCodeSVG value={`upi://pay?pa=${user?.primaryEmailAddress?.emailAddress || backendUser?.email}&pn=User`} size={150} className="mx-auto mb-4"/>
-          <p className="text-xs font-bold text-slate-500">Scan to pay me</p>
-        </div>
+        <UpiQrStandee
+          fullName={user?.fullName || backendUser?.fullName || 'Kyro User'}
+          primaryUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'user').split('@')[0] + '@okkyro'}
+          phoneNumber={user?.primaryPhoneNumber?.phoneNumber || '7818086344'}
+          isMerchant={false}
+        />
       )}
+      <QrScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScanSuccess={(payload) => {
+          setScannedPayee(payload);
+          setActiveTab('pay');
+        }}
+      />
     </MobileDashboardLayout>
   );
 };
 
 const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
+    const [showScanner, setShowScanner] = useState(false);
+    const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const { user } = useUser();
     const { user: backendUser } = useAuth();
     const [activeTab, setActiveTab] = useState('history');
@@ -1222,12 +1303,35 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
                  <Layers size={16} className="text-indigo-600" /> Vendor Payouts (Smart Split)
             </h3>
 
-            <SmartPayForm onComplete={() => setRefresh(r => r + 1)} />
+            <SmartPayForm 
+              defaultVpa={scannedPayee?.vpa || ''}
+              defaultAmount={scannedPayee?.amount || ''}
+              defaultName={scannedPayee?.payeeName || ''}
+              onOpenScanner={() => setShowScanner(true)}
+              onComplete={() => {
+                setRefresh(r => r + 1);
+                setScannedPayee(null);
+              }} 
+            />
           </div>
         </div>
       )}
       {activeTab === 'history' && (
         <div>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setShowScanner(true)}
+              className="flex-1 py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 active:scale-95"
+            >
+              <Camera size={16} /> Scan QR to Pay Vendor
+            </button>
+            <button
+              onClick={() => setActiveTab('qr')}
+              className="py-3 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl font-bold text-xs shadow-sm transition flex items-center gap-2 active:scale-95"
+            >
+              <QrCode size={16} /> Store Standee QR
+            </button>
+          </div>
           <h3 className="font-bold text-slate-800 mb-4">Customer Inflows</h3>
           {history.length === 0 && <p className="text-slate-500 text-sm">No inflows yet.</p>}
           {history.map((tx, i) => <TransactionItem key={i} tx={tx} />)}
@@ -1305,12 +1409,21 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
           </div>
         )}
         {activeTab === 'qr' && (
-          <div className="text-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 className="font-bold text-slate-800 mb-4">Store QR Code</h3>
-          <QRCodeSVG value={`upi://pay?pa=${user?.primaryEmailAddress?.emailAddress || backendUser?.email}&pn=Merchant`} size={150} className="mx-auto mb-4"/>
-          <p className="text-xs font-bold text-slate-500 mt-4">Print this QR for your shop counter.</p>
-        </div>
+        <UpiQrStandee
+          fullName={user?.fullName || backendUser?.fullName || 'Merchant Business Store'}
+          primaryUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant').split('@')[0] + '@okkyro'}
+          phoneNumber={user?.primaryPhoneNumber?.phoneNumber || '7818086344'}
+          isMerchant={true}
+        />
       )}
+      <QrScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScanSuccess={(payload) => {
+          setScannedPayee(payload);
+          setActiveTab('pay');
+        }}
+      />
     </MobileDashboardLayout>
     </>
   );
