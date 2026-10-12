@@ -1,6 +1,7 @@
 import { QrScannerModal } from '../components/QrScannerModal';
 import type { ScannedUpiPayload } from '../components/QrScannerModal';
 import { UpiQrStandee } from '../components/UpiQrStandee';
+import { KyroLogo } from '../components/KyroLogo';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -104,8 +105,8 @@ const Sidebar = ({ page, setPage, open, setOpen }: any) => {
       {open && <div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={() => setOpen(false)} />}
       <aside className={`fixed lg:relative z-30 inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
-          <div className="bg-blue-600 p-1.5 rounded-lg"><Activity size={20} /></div>
-          <span className="text-lg font-bold">KyroBank CMS</span>
+          <KyroLogo size="sm" variant="bank" />
+          <span className="text-lg font-black tracking-tight">KyroBank <span className="text-emerald-400 font-extrabold">Core CBS</span></span>
           <button onClick={() => setOpen(false)} className="ml-auto lg:hidden text-slate-400"><X size={18} /></button>
         </div>
         <div className="px-4 py-4 border-b border-slate-800">
@@ -877,7 +878,10 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       <div className="md:w-80 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col relative z-20 shadow-2xl">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white rounded-b-[40px] md:rounded-b-none md:rounded-br-[40px] shadow-lg relative z-10">
           <div className="flex justify-between md:justify-center items-center mb-4 md:mb-6">
-            <h2 className="font-bold text-base md:text-2xl">{title}</h2>
+            <div className="flex items-center gap-2">
+              <KyroLogo size="sm" variant={title?.includes('Business') ? 'merchant' : 'personal'} />
+              <h2 className="font-extrabold text-base md:text-xl tracking-tight">{title}</h2>
+            </div>
             <div className="flex md:hidden items-center gap-3">
               {clerkUser && <UserButton />}
               {backendUser && (
@@ -1030,7 +1034,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
     { name: 'My Number', phone: '7818086344', vpa: '7818086344@ybl' },{ name: 'Vansh (My Number)', phone: '7818086344', vpa: '7818086344@kyro' }];
 
   return (
-    <MobileDashboardLayout title="Normal User" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
@@ -1225,7 +1229,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
 
   return (
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
-      <MobileDashboardLayout title="Merchant Business Portal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+      <MobileDashboardLayout title="KyroPay Business Hub" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 

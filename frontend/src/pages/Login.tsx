@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api';
 import { SignIn, useAuth as useClerkAuth } from '@clerk/clerk-react';
+import { KyroLogo } from '../components/KyroLogo';
 import { 
-  Activity,
+
   ShieldCheck,
   Lock,
   Mail,
@@ -12,7 +13,11 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  User,
+  Store,
+  Landmark,
+  Sparkles
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
@@ -82,15 +87,29 @@ export default function Login() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="flex justify-center">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-600/20 transform rotate-12 transition-transform hover:rotate-0">
-            <Activity className="w-8 h-8 text-white" />
+          <div className="flex flex-col items-center">
+            <KyroLogo size="xl" variant={persona === 'USER' ? 'personal' : persona === 'MERCHANT' ? 'merchant' : 'bank'} animated />
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 border border-blue-200/70 text-blue-700 text-xs font-bold tracking-wider uppercase backdrop-blur-sm shadow-sm">
+              <Sparkles size={13} className="text-blue-500 animate-pulse" />
+              {persona === 'USER' ? 'Consumer UPI 2.0' : persona === 'MERCHANT' ? 'Merchant Operations' : 'Bank Treasury CBS'}
+            </div>
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
-          CMS Finance
+          {persona === 'USER' ? (
+            <>Kyro<span className="text-blue-600">Pay</span></>
+          ) : persona === 'MERCHANT' ? (
+            <>KyroPay <span className="text-indigo-600">Business</span></>
+          ) : (
+            <>KyroBank <span className="text-slate-900">Core CBS</span></>
+          )}
         </h2>
         <p className="mt-2 text-center text-sm text-slate-500 font-medium">
-          Enterprise Transaction Gateway
+          {persona === 'USER' 
+            ? 'Next-Gen UPI 2.0 & Instant Payments Gateway' 
+            : persona === 'MERCHANT' 
+            ? 'Merchant POS Terminal, Live Soundbox & Settlements' 
+            : 'Enterprise Core Banking, Clearing Switch & Treasury'}
         </p>
       </div>
 
@@ -98,8 +117,12 @@ export default function Login() {
         <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/20">
           
           <div className="mb-8 text-center">
-            <h3 className="text-lg font-bold text-slate-900">Sign in to your account</h3>
-            <p className="text-slate-500 mt-2">Select your portal access level below</p>
+            <h3 className="text-lg font-bold text-slate-900">
+              {persona === 'USER' ? 'Sign in to KyroPay Personal' : persona === 'MERCHANT' ? 'Sign in to Merchant Hub' : 'Bank Staff & Governance Portal'}
+            </h3>
+            <p className="text-slate-500 mt-2 text-xs sm:text-sm">
+              {persona === 'USER' ? 'Access your UPI 2.0 wallet, instant transfers & QR scanner' : persona === 'MERCHANT' ? 'Manage business collections, dynamic QR standees & settlements' : 'Authorized internal bank personnel login with 4-eyes Maker-Checker'}
+            </p>
           </div>
 
           {/* Persona Tabs */}
@@ -109,21 +132,21 @@ export default function Login() {
               onClick={() => { setPersona('USER'); localStorage.setItem('userType', 'user'); if (isSignedIn) navigate('/dashboard'); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === 'USER' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
-              Normal User
+              <span className="flex items-center justify-center gap-1.5"><User size={15} /> Normal User</span>
             </button>
             <button 
               type="button"
               onClick={() => { setPersona('MERCHANT'); localStorage.setItem('userType', 'merchant'); if (isSignedIn) navigate('/dashboard'); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === 'MERCHANT' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
-              Merchant
+              <span className="flex items-center justify-center gap-1.5"><Store size={15} /> Merchant</span>
             </button>
             <button 
               type="button"
               onClick={() => { setPersona('EMPLOYEE'); if (isAuthenticated) navigate('/dashboard'); }}
               className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 transform active:scale-95 ${persona === 'EMPLOYEE' ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
             >
-              Bank Employee
+              <span className="flex items-center justify-center gap-1.5"><Landmark size={15} /> Bank Staff</span>
             </button>
           </div>
 
