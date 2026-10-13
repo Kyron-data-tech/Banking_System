@@ -137,4 +137,42 @@ public class UpiSplitService {
         });
         return upiParentTransactionRepository.findBySenderIdInOrderByCreatedAtDesc(ids);
     }
+
+    @Transactional
+    public UpiParentTransaction settleMerchantBalance(String merchantId, BigDecimal amount, String mpin, String bankAccount, String ifsc) {
+        User merchant = userRepository.findByEmail(merchantId)
+                .or(() -> userRepository.findByUpiId(merchantId))
+                .orElse(null);
+        if (merchant != null && merchant.getMpin() != null && !merchant.getMpin().equals(mpin)) {
+            throw new RuntimeException("INVALID_MPIN");
+        }
+
+        String parentRef = "STL-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        
+        // Simulate IMPS Settlement Latency
+        try { 
+            Thread.sleep(1200); 
+        } catch (InterruptedException e) { 
+            Thread.currentThread().interrupt(); 
+        }
+
+        UpiParentTransaction settlement = UpiParentTransaction.builder()
+                .parentReferenceNo(parentRef)
+                .senderId(merchantId)
+                .receiverId("BANK SETTLEMENT: " + bankAccount + " (" + ifsc + ")")
+                .totalAmount(amount)
+                .status("COMPLETED")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        UpiTransactionPacket packet = UpiTransactionPacket.builder()
+                .packetUtr(generateUtr())
+                .amount(amount)
+                .parentTransaction(settlement)
+                .build();
+
+        settlement.setPackets(List.of(packet));
+        log.info("Merchant settlement executed: {} settled INR {} to {} (Ref: {})", merchantId, amount, bankAccount, parentRef);
+        return upiParentTransactionRepository.save(settlement);
+    }
 }

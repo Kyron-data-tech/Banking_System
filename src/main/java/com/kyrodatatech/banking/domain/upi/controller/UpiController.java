@@ -109,4 +109,26 @@ public class UpiController {
     public ResponseEntity<List<UpiParentTransaction>> getInflows(@RequestParam String receiverId) {
         return ResponseEntity.ok(upiSplitService.getInflowsForReceiver(receiverId));
     }
+
+    @PostMapping("/settle")
+    public ResponseEntity<?> settleToBank(@RequestBody Map<String, Object> request) {
+        String merchantId = (String) request.get("merchantId");
+        String mpin = (String) request.get("mpin");
+        String bankAccount = (String) request.getOrDefault("bankAccount", "HDFC Bank - A/c 50100482910");
+        String ifsc = (String) request.getOrDefault("ifsc", "HDFC0001234");
+        BigDecimal amount = new BigDecimal(request.get("amount").toString());
+
+        try {
+            UpiParentTransaction settlement = upiSplitService.settleMerchantBalance(merchantId, amount, mpin, bankAccount, ifsc);
+            return ResponseEntity.ok(Map.of(
+                "message", "Settlement of INR " + amount + " processed successfully via Instant IMPS (T+0)",
+                "settlement", settlement
+            ));
+        } catch (Exception e) {
+            if ("INVALID_MPIN".equals(e.getMessage())) {
+                return ResponseEntity.status(400).body(Map.of("error", "Incorrect MPIN entered."));
+            }
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

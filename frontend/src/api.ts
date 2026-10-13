@@ -110,7 +110,9 @@ export const upiApi = {
   getOutflows: (senderId: string) => api.get(`/upi/outflows?senderId=${encodeURIComponent(senderId)}`),
   getInflows: (receiverId: string) => api.get(`/upi/inflows?receiverId=${encodeURIComponent(receiverId)}`),
   getUpiProfile: (email: string) => api.get(`/upi/me?email=${encodeURIComponent(email)}`),
-  onboard: (email: string, upiId: string, mpin: string) => api.post(`/upi/onboard`, { email, upiId, mpin })
+  onboard: (email: string, upiId: string, mpin: string) => api.post(`/upi/onboard`, { email, upiId, mpin }),
+  settle: (merchantId: string, amount: number, mpin: string, bankAccount?: string, ifsc?: string) =>
+    api.post('/upi/settle', { merchantId, amount, mpin, bankAccount, ifsc }),
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };

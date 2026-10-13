@@ -2,13 +2,17 @@ import { QrScannerModal } from '../components/QrScannerModal';
 import type { ScannedUpiPayload } from '../components/QrScannerModal';
 import { UpiQrStandee } from '../components/UpiQrStandee';
 import { KyroLogo } from '../components/KyroLogo';
+import { PaymentReceiptModal } from '../components/PaymentReceiptModal';
+import { MerchantSettlementModal } from '../components/MerchantSettlementModal';
+import { AccountStatementModal } from '../components/AccountStatementModal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
   Camera, Search, ArrowDownLeft, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
   LogOut, Banknote, Archive, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
-  Menu, X, Bell, Plus, QrCode
+  Menu, X, Bell, Plus, QrCode,
+  Receipt, FileSpreadsheet, Building2, ArrowDownToLine
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { userApi, paymentApi, llmApi, authApi, upiApi } from '../api';
@@ -600,44 +604,87 @@ const LlmPage = ({ showToast }: any) => {
 // NEW HACKATHON DASHBOARDS: Normal User (Sender) & Merchant (Receiver/Sender)
 // --------------------------------------------------------------------------------
 
-const TransactionItem = ({ tx }: { tx: any }) => {
+const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: any) => void }) => {
   const [expanded, setExpanded] = useState(false);
   const isOut = tx.type === 'OUT';
+  const isSettlement = tx.receiverId?.startsWith('BANK SETTLEMENT:') || tx.receiverId?.startsWith('SETTLEMENT:');
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-3 overflow-hidden">
-      <div className="p-4 cursor-pointer hover:bg-slate-50 transition flex justify-between items-center" onClick={() => setExpanded(!expanded)}>
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 mb-3 overflow-hidden transition hover:shadow-md">
+      <div className="p-4 cursor-pointer hover:bg-slate-50/80 transition flex justify-between items-center" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isOut ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
-            <Activity size={20} />
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            isSettlement 
+              ? 'bg-purple-100 text-purple-700' 
+              : isOut 
+              ? 'bg-orange-100 text-orange-600' 
+              : 'bg-emerald-100 text-emerald-600'
+          }`}>
+            {isSettlement ? <Building2 size={20} /> : <Activity size={20} />}
           </div>
           <div>
-            <p className="font-bold text-sm text-slate-800">{isOut ? 'Paid to' : 'Received from'}</p>
-            <p className="text-xs text-slate-500 max-w-[120px] truncate">{isOut ? tx.receiverId : tx.senderId}</p>
-            <p className="text-[10px] text-slate-400 mt-0.5">{tx.createdAt ? new Date(tx.createdAt).toLocaleString() : 'Just now'}</p>
+            <p className="font-extrabold text-sm text-slate-800">
+              {isSettlement ? 'Bank Settlement' : isOut ? 'Paid to' : 'Received from'}
+            </p>
+            <p className="text-xs text-slate-500 max-w-[150px] truncate">
+              {isOut ? tx.receiverId : tx.senderId}
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {tx.createdAt ? new Date(tx.createdAt).toLocaleString('en-IN') : 'Just now'}
+            </p>
           </div>
         </div>
         <div className="text-right flex items-center gap-3">
           <div>
-            <p className="font-bold text-slate-800">₹{tx.totalAmount}</p>
-            <p className="text-xs text-green-600 font-bold">{tx.status}</p>
+            <p className={`font-black text-sm md:text-base ${
+              isSettlement 
+                ? 'text-purple-700' 
+                : isOut 
+                ? 'text-slate-900' 
+                : 'text-emerald-600'
+            }`}>
+              {isOut ? '-' : '+'}₹{Number(tx.totalAmount).toLocaleString('en-IN')}
+            </p>
+            <p className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+              {tx.status}
+            </p>
           </div>
           <ChevronDown size={16} className={`text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
       </div>
       
-      {expanded && tx.packets && (
-        <div className="bg-slate-50 p-4 border-t border-slate-100">
-          <div className="flex items-center gap-2 mb-3">
-            <Bot size={16} className="text-blue-600"/>
-            <p className="text-xs font-bold text-blue-800">Smart Split Applied: {tx.packets.length} Packets</p>
-          </div>
-          <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar pr-2">
-            {tx.packets.map((p: any, i: number) => (
-              <div key={i} className="flex justify-between items-center bg-white p-2 rounded border border-slate-200 shadow-sm text-xs">
-                <span className="font-mono text-slate-500">{p.packetUtr}</span>
-                <span className="font-bold text-slate-700">₹{p.amount}</span>
+      {expanded && (
+        <div className="bg-slate-50 p-4 border-t border-slate-100 space-y-3">
+          {tx.packets && tx.packets.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Bot size={15} className="text-blue-600"/>
+                <p className="text-xs font-bold text-blue-900">
+                  {isSettlement ? 'Settlement UTR Reference' : `NPCI Packets (${tx.packets.length})`}
+                </p>
               </div>
-            ))}
+              <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar pr-2">
+                {tx.packets.map((p: any, i: number) => (
+                  <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm text-xs">
+                    <span className="font-mono text-slate-500 font-medium">UTR: {p.packetUtr}</span>
+                    <span className="font-extrabold text-slate-800">₹{p.amount}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end pt-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewReceipt && onViewReceipt(tx);
+              }}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <Receipt size={14} /> View / Download Slip
+            </button>
           </div>
         </div>
       )}
@@ -678,7 +725,7 @@ const SmartPayForm = ({
   defaultVpa?: string, 
   defaultAmount?: string,
   defaultName?: string,
-  onComplete: () => void,
+  onComplete: (tx?: any) => void,
   onOpenScanner?: () => void
 }) => {
     const { user } = useUser();
@@ -732,12 +779,12 @@ const SmartPayForm = ({
         setStatus(null);
         try {
             const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
-            await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
+            const res = await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
             setShowMpin(false);
             setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
             setLocalToast({ msg: `Payment of ₹${amount} successful!`, type: 'success' });
             playSuccessSound();
-            onComplete();
+            onComplete(res.data?.transaction);
             setAmount('');
             setVerifiedName(null);
             setTimeout(() => setLocalToast(null), 4000);
@@ -999,6 +1046,9 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         }, 1500); // simulate network verification
     };
 
+    const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
+    const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
+
   const { user } = useUser();
   const { user: backendUser } = useAuth();
   const [activeTab, setActiveTab] = useState('pay');
@@ -1108,18 +1158,40 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
               defaultAmount={scannedPayee?.amount || ''}
               defaultName={scannedPayee?.payeeName || ''}
               onOpenScanner={() => setShowScanner(true)}
-              onComplete={() => {
+              onComplete={(createdTx) => {
                 setRefresh(r => r + 1);
                 setScannedPayee(null);
+                if (createdTx) {
+                  setActiveReceipt(createdTx);
+                }
               }} 
             />
           </div>
         </div>
       )}
       {activeTab === 'history' && (
-        <div>
-          <h3 className="font-bold text-slate-800 mb-4">Payment History</h3>
-          {history.map((tx, i) => <TransactionItem key={i} tx={tx} />)}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-extrabold text-slate-800 text-lg">Payment History</h3>
+              <p className="text-xs text-slate-500">Track all incoming & outgoing transfers</p>
+            </div>
+            <button
+              onClick={() => setShowStatementModal(true)}
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <FileSpreadsheet size={15} className="text-emerald-600" />
+              Download Statement
+            </button>
+          </div>
+          {history.length === 0 && <p className="text-slate-500 text-sm">No transactions yet.</p>}
+          {history.map((tx, i) => (
+            <TransactionItem 
+              key={i} 
+              tx={tx} 
+              onViewReceipt={(selected) => setActiveReceipt(selected)}
+            />
+          ))}
         </div>
       )}
       {activeTab === 'contact' && (
@@ -1149,6 +1221,28 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
           setActiveTab('pay');
         }}
       />
+      <PaymentReceiptModal
+        isOpen={!!activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+        data={activeReceipt ? {
+          transactionId: activeReceipt.id,
+          parentReferenceNo: activeReceipt.parentReferenceNo,
+          senderId: activeReceipt.senderId,
+          receiverId: activeReceipt.receiverId,
+          amount: activeReceipt.totalAmount,
+          status: activeReceipt.status,
+          createdAt: activeReceipt.createdAt,
+          packets: activeReceipt.packets,
+        } : null}
+      />
+      <AccountStatementModal
+        isOpen={showStatementModal}
+        onClose={() => setShowStatementModal(false)}
+        transactions={history}
+        accountName={user?.fullName || backendUser?.fullName || 'Kyro User'}
+        accountUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'user').split('@')[0] + '@okkyro'}
+        isMerchant={false}
+      />
     </MobileDashboardLayout>
   );
 };
@@ -1156,6 +1250,10 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
 const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
     const [showScanner, setShowScanner] = useState(false);
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
+    const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
+    const [showSettlementModal, setShowSettlementModal] = useState<boolean>(false);
+    const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
+
     const { user } = useUser();
     const { user: backendUser } = useAuth();
     const [activeTab, setActiveTab] = useState('history');
@@ -1189,6 +1287,8 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
   const [refresh, setRefresh] = useState(0);
 
     const totalCollections = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
+    const totalSettled = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
+    const unsettledBalance = Math.max(0, totalCollections - totalSettled);
     const txCount = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').length;
 
     const [incomingToast, setIncomingToast] = useState<{amount: number, sender: string} | null>(null);
@@ -1208,7 +1308,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         ]).then(([inRes, outRes]) => {
           const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
           const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
-          const allTxs = [...ins, ...outs]; // Prefer OUT if same id // Prefer OUT if same id
+          const allTxs = [...ins, ...outs];
             const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
             const all = uniqueTxs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           
@@ -1233,7 +1333,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
-          <div className="bg-gradient-to-br from-indigo-700 to-purple-800 rounded-3xl p-6 text-white shadow-2xl mb-6 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-700 to-purple-800 rounded-3xl p-6 text-white shadow-2xl mb-4 relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
             <div className="relative z-10">
@@ -1257,15 +1357,39 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
               
               <div className="flex gap-4 mt-6">
                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
-                  <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Transactions</p>
-                  <p className="font-bold text-base">{txCount}</p>
+                  <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Unsettled ({txCount} Txs)</p>
+                  <p className="font-extrabold text-base text-white">₹{unsettledBalance.toLocaleString('en-IN')}</p>
                 </div>
-                <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
-                  <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Settlements</p>
-                  <p className="font-bold text-base text-emerald-400">Clear</p>
+                <div 
+                  onClick={() => setShowSettlementModal(true)}
+                  className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 cursor-pointer backdrop-blur-sm rounded-2xl p-3 border border-emerald-400/30 transition flex flex-col justify-center"
+                >
+                  <p className="text-[10px] text-emerald-200 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
+                    <ArrowDownToLine size={12} /> Settle to Bank
+                  </p>
+                  <p className="font-black text-xs text-emerald-300">Instant IMPS (T+0)</p>
                 </div>
               </div>
             </div>
+            </div>
+
+            {/* Quick Settlement & Statement Action Bar */}
+            <div className="flex gap-2.5 mb-6">
+              <button
+                type="button"
+                onClick={() => setShowSettlementModal(true)}
+                disabled={unsettledBalance <= 0}
+                className="flex-1 py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+              >
+                <ArrowDownToLine size={16} /> Settle ₹{unsettledBalance.toLocaleString('en-IN')} to Bank
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStatementModal(true)}
+                className="py-3.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-2xl shadow-sm transition flex items-center gap-1.5 active:scale-95"
+              >
+                <FileSpreadsheet size={16} className="text-emerald-600" /> Statement
+              </button>
             </div>
 
             <Modal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} title="Verify Merchant PIN">
@@ -1312,17 +1436,20 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
               defaultAmount={scannedPayee?.amount || ''}
               defaultName={scannedPayee?.payeeName || ''}
               onOpenScanner={() => setShowScanner(true)}
-              onComplete={() => {
+              onComplete={(createdTx) => {
                 setRefresh(r => r + 1);
                 setScannedPayee(null);
+                if (createdTx) {
+                  setActiveReceipt(createdTx);
+                }
               }} 
             />
           </div>
         </div>
       )}
       {activeTab === 'history' && (
-        <div>
-          <div className="flex gap-2 mb-4">
+        <div className="space-y-4">
+          <div className="flex gap-2 mb-2">
             <button
               onClick={() => setShowScanner(true)}
               className="flex-1 py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-bold text-xs shadow-md transition flex items-center justify-center gap-2 active:scale-95"
@@ -1336,9 +1463,27 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
               <QrCode size={16} /> Store Standee QR
             </button>
           </div>
-          <h3 className="font-bold text-slate-800 mb-4">Customer Inflows</h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-extrabold text-slate-800 text-lg">Customer Inflows & Ledger</h3>
+              <p className="text-xs text-slate-500">Live feed of collections & bank settlements</p>
+            </div>
+            <button
+              onClick={() => setShowStatementModal(true)}
+              className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+            >
+              <FileSpreadsheet size={15} className="text-emerald-600" />
+              Download Statement
+            </button>
+          </div>
           {history.length === 0 && <p className="text-slate-500 text-sm">No inflows yet.</p>}
-          {history.map((tx, i) => <TransactionItem key={i} tx={tx} />)}
+          {history.map((tx, i) => (
+            <TransactionItem 
+              key={i} 
+              tx={tx} 
+              onViewReceipt={(selected) => setActiveReceipt(selected)}
+            />
+          ))}
         </div>
       )}
       {activeTab === 'contact' && (
@@ -1427,6 +1572,40 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
           setScannedPayee(payload);
           setActiveTab('pay');
         }}
+      />
+      <MerchantSettlementModal
+        isOpen={showSettlementModal}
+        onClose={() => setShowSettlementModal(false)}
+        availableBalance={unsettledBalance}
+        merchantEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyro'}
+        onSettlementSuccess={(settlementTx) => {
+          setRefresh(r => r + 1);
+          if (settlementTx) {
+            setActiveReceipt(settlementTx);
+          }
+        }}
+      />
+      <PaymentReceiptModal
+        isOpen={!!activeReceipt}
+        onClose={() => setActiveReceipt(null)}
+        data={activeReceipt ? {
+          transactionId: activeReceipt.id,
+          parentReferenceNo: activeReceipt.parentReferenceNo,
+          senderId: activeReceipt.senderId,
+          receiverId: activeReceipt.receiverId,
+          amount: activeReceipt.totalAmount,
+          status: activeReceipt.status,
+          createdAt: activeReceipt.createdAt,
+          packets: activeReceipt.packets,
+        } : null}
+      />
+      <AccountStatementModal
+        isOpen={showStatementModal}
+        onClose={() => setShowStatementModal(false)}
+        transactions={history}
+        accountName={user?.fullName || backendUser?.fullName || 'Merchant Business Store'}
+        accountUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant').split('@')[0] + '@okkyro'}
+        isMerchant={true}
       />
     </MobileDashboardLayout>
     </>
