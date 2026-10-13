@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   AlertCircle, 
@@ -31,6 +31,14 @@ export const MerchantSettlementModal: React.FC<MerchantSettlementModalProps> = (
   const bankAccount = '50100482910';
   const bankName = 'HDFC Bank';
   const ifsc = 'HDFC0001234';
+
+  useEffect(() => {
+    if (isOpen) {
+      setAmount(availableBalance > 0 ? String(availableBalance) : '');
+      setMpin('');
+      setError('');
+    }
+  }, [isOpen, availableBalance]);
 
   if (!isOpen) return null;
 

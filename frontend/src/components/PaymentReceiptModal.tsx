@@ -56,7 +56,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const handleCopy = () => {
     const text = `--- KYROPAY OFFICIAL PAYMENT RECEIPT ---
 Status: SUCCESSFUL
-Amount: ₹${data.amount.toLocaleString('en-IN')}
+Amount: ₹${(Number(data.amount) || 0).toLocaleString('en-IN')}
 UTR / Reference: ${mainUtr}
 Order Ref: ${refNo}
 Date: ${formattedDate}

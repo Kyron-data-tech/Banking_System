@@ -27,7 +27,7 @@ interface AccountStatementModalProps {
   onClose: () => void;
   transactions: StatementTransaction[];
   accountName: string;
-  accountUpiId: string;
+  accountUpiId?: string;
   isMerchant?: boolean;
 }
 
@@ -36,19 +36,19 @@ export const AccountStatementModal: React.FC<AccountStatementModalProps> = ({
   onClose,
   transactions,
   accountName,
-  accountUpiId,
+  accountUpiId = 'user@okkyro',
   isMerchant = false,
 }) => {
   const [dateRange, setDateRange] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  if (!isOpen) return null;
-
-  // Filter transactions
+  // Filter transactions - Must run unconditionally before any early return to obey React Rules of Hooks
   const filtered = useMemo(() => {
+    if (!transactions || !Array.isArray(transactions)) return [];
     const now = new Date();
     return transactions.filter((tx) => {
+      if (!tx) return false;
       // Type filter
       if (typeFilter !== 'ALL') {
         const txType = tx.type || (tx.senderId?.includes(accountUpiId) ? 'OUT' : 'IN');
@@ -58,11 +58,12 @@ export const AccountStatementModal: React.FC<AccountStatementModalProps> = ({
       // Date filter
       if (dateRange !== 'ALL' && tx.createdAt) {
         const txDate = new Date(tx.createdAt);
+        if (isNaN(txDate.getTime())) return false;
         if (dateRange === 'TODAY') {
           if (txDate.toDateString() !== now.toDateString()) return false;
         } else if (dateRange === 'WEEK') {
           const diffDays = (now.getTime() - txDate.getTime()) / (1000 * 3600 * 24);
-          if (diffDays > 7) return false;
+          if (diffDays > 7 || diffDays < 0) return false;
         } else if (dateRange === 'MONTH') {
           if (txDate.getMonth() !== now.getMonth() || txDate.getFullYear() !== now.getFullYear()) {
             return false;
@@ -75,7 +76,7 @@ export const AccountStatementModal: React.FC<AccountStatementModalProps> = ({
         const query = searchQuery.toLowerCase();
         const matchesSender = tx.senderId?.toLowerCase().includes(query);
         const matchesReceiver = tx.receiverId?.toLowerCase().includes(query);
-        const matchesUtr = tx.packets?.some(p => p.packetUtr.includes(query)) || tx.parentReferenceNo?.toLowerCase().includes(query);
+        const matchesUtr = tx.packets?.some(p => p.packetUtr?.includes(query)) || tx.parentReferenceNo?.toLowerCase().includes(query);
         if (!matchesSender && !matchesReceiver && !matchesUtr) return false;
       }
 
@@ -85,11 +86,14 @@ export const AccountStatementModal: React.FC<AccountStatementModalProps> = ({
 
   const totalCredits = filtered
     .filter((t) => t.type === 'IN')
-    .reduce((sum, t) => sum + Number(t.totalAmount), 0);
+    .reduce((sum, t) => sum + Number(t.totalAmount || 0), 0);
 
   const totalDebits = filtered
     .filter((t) => t.type === 'OUT')
-    .reduce((sum, t) => sum + Number(t.totalAmount), 0);
+    .reduce((sum, t) => sum + Number(t.totalAmount || 0), 0);
+
+  // Early return only after all hooks have been called
+  if (!isOpen) return null;
 
   // Generate & Download CSV
   const handleExportCsv = () => {
