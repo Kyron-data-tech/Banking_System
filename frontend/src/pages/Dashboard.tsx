@@ -966,6 +966,7 @@ const SmartPayForm = ({
 const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab }: any) => {
   const { logout, user: backendUser } = useAuth();
   const { user: clerkUser } = useUser();
+  const isMerchant = Boolean(title?.toLowerCase().includes('business') || title?.toLowerCase().includes('merchant'));
   
   const handleLogout = () => {
     if (backendUser) logout();
@@ -1008,20 +1009,22 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
         {/* DESKTOP NAVIGATION SIDEBAR */}
         <div className="hidden md:flex flex-col gap-1.5 p-4 flex-1 mt-4 overflow-y-auto no-scrollbar pb-8 scrollbar-hide">
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
-            <Activity size={24} /> <span className="font-bold text-base">Payments</span>
+            <Activity size={24} /> <span className="font-bold text-base">{isMerchant ? 'Overview & Collections' : 'Payments'}</span>
           </div>
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={24} /> <span className="font-bold text-base">Transaction History</span>
+            <HistoryIcon size={24} /> <span className="font-bold text-base">{isMerchant ? 'Settlements & History' : 'Transaction History'}</span>
           </div>
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
-            <Users size={24} /> <span className="font-bold text-base">Contacts & Split</span>
+            <Users size={24} /> <span className="font-bold text-base">{isMerchant ? 'Customer Directory' : 'Contacts & Split'}</span>
           </div>
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'qr' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('qr')}>
-            <QrCode size={24} /> <span className="font-bold text-base">My QR Code</span>
+            <QrCode size={24} /> <span className="font-bold text-base">{isMerchant ? 'Store Standee QR' : 'My QR Code'}</span>
           </div>
-          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
-            <ShieldCheck size={24} /> <span className="font-bold text-base">API Settings</span>
-          </div>
+          {isMerchant && (
+            <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
+              <ShieldCheck size={24} /> <span className="font-bold text-base">API Keys (Web Integration)</span>
+            </div>
+          )}
           
           <div className="mt-auto pt-6">
              <div className="flex items-center justify-between mt-8 p-4 bg-slate-900/50 rounded-2xl border border-slate-700">
@@ -1048,27 +1051,29 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       
       {/* MOBILE BOTTOM NAV */}
       <div className="md:hidden bg-white border-t border-slate-200 p-4 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20">
-        <div className="flex justify-between px-2">
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('developer')}>
-            <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">Dev</span>
+        <div className="flex justify-around px-2">
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('pay')}>
+            <Activity size={24} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'Overview' : 'Pay'}</span>
           </div>
           <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('qr')}>
             <QrCode size={24} className={activeTab === 'qr' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">QR Code</span>
+            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'QR Standee' : 'QR Code'}</span>
           </div>
           <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('contact')}>
             <Users size={24} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">Contacts</span>
-          </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('pay')}>
-            <Activity size={24} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">Pay</span>
+            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'Customers' : 'Contacts'}</span>
           </div>
           <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('history')}>
             <HistoryIcon size={24} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">History</span>
+            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'Ledger' : 'History'}</span>
           </div>
+          {isMerchant && (
+            <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('developer')}>
+              <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
+              <span className="text-[10px] font-bold text-slate-600">API Keys</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1413,7 +1418,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
 
     const { user } = useUser();
     const { user: backendUser } = useAuth();
-    const [activeTab, setActiveTab] = useState('history');
+    const [activeTab, setActiveTab] = useState('pay');
     
     const [balanceVisible, setBalanceVisible] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
@@ -1755,10 +1760,28 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         </div>
       )}
       {activeTab === 'developer' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center">
-            <h3 className="font-bold text-slate-800 mb-4">Developer Settings</h3>
-            <p className="text-xs text-slate-500 mb-4">Generate RuPay Sandbox API Key for integration.</p>
-            <button onClick={async () => {
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl animate-fade-in text-left">
+            <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-100">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <ShieldCheck size={26} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-slate-900 text-base">B2B Merchant API Keys</h3>
+                <p className="text-xs text-slate-500">Integrate KyroPay checkout into your website, app, or POS</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 mb-5 border border-slate-200 text-xs text-slate-600 space-y-2">
+              <p className="font-bold text-slate-800">What is this for?</p>
+              <p>Generate secure API credentials to accept real-time KyroPay UPI & RuPay payments from customers on your external e-commerce store (Shopify, WooCommerce, custom web apps).</p>
+              <div className="flex items-center gap-2 text-[11px] text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>Never share your secret key or commit it into frontend source code.</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={async () => {
                 try {
                     const token = localStorage.getItem('accessToken');
                     const res = await fetch(`${window.location.protocol}//${window.location.hostname}:8080/api/merchant/keys/generate?email=${backendUser?.email || ''}`, {
@@ -1767,15 +1790,18 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
                     });
                     const data = await res.json();
                     if (data.apiKey) {
-                        alert('Generated Key: ' + data.apiKey);
+                        alert('Generated KyroPay Merchant Key:\n\n' + data.apiKey + '\n\nStore this key safely in your backend .env file.');
                     } else {
                         alert('Error: ' + JSON.stringify(data));
                     }
                 } catch(e) {
-                    alert('Error generating key');
+                    alert('Error generating key. Ensure backend server is reachable.');
                 }
-            }} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl mb-4 transition">Generate RuPay Key</button>
-            <p className="text-xs text-slate-500">Store this securely. Do not expose it in frontend code.</p>
+              }} 
+              className="w-full bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 hover:from-slate-800 hover:to-blue-800 text-white font-extrabold py-3.5 rounded-2xl shadow-lg transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer text-xs"
+            >
+              <ShieldCheck size={16} /> Generate KyroPay Merchant API Key
+            </button>
           </div>
         )}
         {activeTab === 'qr' && (
