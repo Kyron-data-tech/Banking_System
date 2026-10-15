@@ -6,6 +6,8 @@ import { PaymentReceiptModal } from '../components/PaymentReceiptModal';
 import { MerchantSettlementModal } from '../components/MerchantSettlementModal';
 import { AccountStatementModal } from '../components/AccountStatementModal';
 import { RazorpayCheckoutModal } from '../components/RazorpayCheckoutModal';
+import { LinkBankAccountModal } from '../components/LinkBankAccountModal';
+import type { LinkedBankAccount } from '../components/LinkBankAccountModal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -1147,6 +1149,37 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   const [history, setHistory] = useState<any[]>([]);
   const [refresh, setRefresh] = useState(0);
 
+  const [showLinkBankModal, setShowLinkBankModal] = useState<boolean>(false);
+  const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem('kyro_linked_banks');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      {
+        id: 'bank_hdfc_default',
+        bankName: 'HDFC Bank',
+        accountNumber: '•••• 4321',
+        rawAccountNumber: '50100412344321',
+        ifsc: 'HDFC0001234',
+        accountHolder: user?.fullName || backendUser?.fullName || 'Vansh Jain',
+        accountType: 'SAVINGS',
+        isPrimary: true,
+        linkedAt: '2026-10-15T10:00:00Z',
+      }
+    ];
+  });
+
+  const handleAccountLinked = (newAcc: LinkedBankAccount) => {
+    setLinkedBanks(prev => {
+      const updated = [newAcc, ...prev.map(b => ({ ...b, isPrimary: false }))];
+      try {
+        localStorage.setItem('kyro_linked_banks', JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
   useEffect(() => {
         setBalanceVisible(false);
     }, [activeTab]);
@@ -1312,6 +1345,60 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
             </button>
           </div>
 
+          {/* LINKED COMMERCIAL BANK ACCOUNTS (NPCI VERIFIED) */}
+          <div className="bg-white rounded-3xl p-5 mb-6 border border-slate-200 shadow-md">
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <Building2 size={18} />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-xs text-slate-800">Linked Commercial Bank Accounts</h4>
+                  <p className="text-[10px] text-slate-400 font-medium">NPCI Mandate & IMPS Verified Sources</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLinkBankModal(true)}
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer active:scale-95 border border-blue-100"
+              >
+                <Plus size={14} /> Link Bank
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {linkedBanks.map((b) => (
+                <div
+                  key={b.id}
+                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between hover:border-blue-300 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs shadow-sm">
+                      🏛️
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-extrabold text-xs text-slate-800">{b.bankName}</span>
+                        {b.isPrimary && (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-700 font-extrabold px-1.5 py-0.5 rounded-md">
+                            PRIMARY
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-mono text-slate-500 font-medium">
+                        {b.accountNumber} • {b.ifsc}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                    <CheckCircle2 size={12} />
+                    <span>NPCI Active</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
             <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
                <Activity size={16} className="text-blue-600" /> Send Money Instantly
@@ -1446,6 +1533,12 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
             setActiveReceipt(createdTx);
           }
         }}
+      />
+      <LinkBankAccountModal
+        isOpen={showLinkBankModal}
+        onClose={() => setShowLinkBankModal(false)}
+        userName={user?.fullName || backendUser?.fullName || 'Vansh Jain'}
+        onAccountLinked={handleAccountLinked}
       />
     </MobileDashboardLayout>
   );

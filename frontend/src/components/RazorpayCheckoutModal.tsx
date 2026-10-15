@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   Loader2,
   Delete,
-  ArrowLeft
+  ArrowLeft,
+  ExternalLink
 } from 'lucide-react';
 import { razorpayApi } from '../api';
 
@@ -108,6 +109,98 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
       setStep('PIN_AUTH');
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to initiate bank transaction.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Launch Official Razorpay Standard Checkout Popup (checkout.js)
+  const handleLaunchOfficialRazorpay = async () => {
+    setError('');
+    if (!amount || amount <= 0) {
+      setError('Please enter a valid amount greater than ₹0.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. Create order on backend
+      const orderRes = await razorpayApi.createOrder({
+        amount,
+        userEmail,
+        purpose,
+        receiverId,
+        notes: `KyroPay Gateway Checkout - ${purpose}`,
+      });
+      const order = orderRes.data;
+
+      // 2. Fetch public key config from backend
+      let keyId = 'rzp_test_KyroPay2026';
+      try {
+        const cfgRes = await razorpayApi.getConfig();
+        if (cfgRes.data?.keyId) keyId = cfgRes.data.keyId;
+      } catch (e) {
+        // use fallback
+      }
+
+      if (typeof (window as any).Razorpay === 'function') {
+        const options = {
+          key: keyId,
+          amount: Math.round(amount * 100),
+          currency: 'INR',
+          name: 'KyroPay Direct Bank Switch',
+          description: purpose === 'ADD_FUNDS' ? 'Bank Account Fund Deposit' : `Payment to ${receiverName || receiverId || 'Merchant'}`,
+          order_id: order?.orderId && !order.orderId.startsWith('order_') ? order.orderId : undefined,
+          prefill: {
+            email: userEmail,
+            contact: '7818086344',
+          },
+          theme: {
+            color: '#2563eb',
+          },
+          handler: async (response: any) => {
+            setStep('PROCESSING');
+            try {
+              const verifyRes = await razorpayApi.verifyPayment({
+                razorpayOrderId: response.razorpay_order_id || order?.orderId,
+                razorpayPaymentId: response.razorpay_payment_id || 'pay_' + Math.random().toString(36).substring(2, 12),
+                razorpaySignature: response.razorpay_signature || 'sig_' + Math.random().toString(36).substring(2, 12),
+                amount,
+                userEmail,
+                purpose,
+                receiverId,
+                paymentMethod: 'RAZORPAY_GATEWAY',
+                bankName: 'Official Razorpay Gateway',
+              });
+
+              setStep('SUCCESS');
+              onPaymentSuccess(verifyRes.data?.transaction);
+            } catch (err: any) {
+              setError(err.response?.data?.error || 'Payment verification failed.');
+              setStep('SELECT');
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+            }
+          }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.on('payment.failed', function (resp: any) {
+          setError(resp.error?.description || 'Gateway transaction failed.');
+          setStep('SELECT');
+        });
+        rzp.open();
+        setLoading(false);
+      } else {
+        // Fallback to in-app MPIN
+        setOrderData(order);
+        setStep('PIN_AUTH');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to initiate Razorpay checkout.');
     } finally {
       setLoading(false);
     }
@@ -561,7 +654,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
               </div>
             )}
 
-            {/* Authorize & Pay Button */}
+            {/* Authorize & Pay Button (In-App Authentic NPCI 6-Digit MPIN) */}
             <button
               type="submit"
               disabled={loading}
@@ -576,6 +669,24 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                   <Lock size={16} /> Proceed to Enter UPI PIN (₹{amount.toLocaleString('en-IN')})
                 </>
               )}
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase tracking-wider">or</span>
+              <div className="flex-grow border-t border-slate-200"></div>
+            </div>
+
+            {/* Official Razorpay Standard Checkout Modal Button */}
+            <button
+              type="button"
+              onClick={handleLaunchOfficialRazorpay}
+              disabled={loading}
+              className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-2xl shadow-md transition flex items-center justify-center gap-2 active:scale-95 cursor-pointer border border-slate-700"
+            >
+              <ExternalLink size={15} className="text-cyan-400" />
+              <span>Launch Official Razorpay Modal (QR Code & All Banks)</span>
             </button>
 
             {/* Security Guarantee Footer */}

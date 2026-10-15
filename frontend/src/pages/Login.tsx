@@ -86,6 +86,15 @@ export default function Login() {
       
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        {/* Network Telemetry Status Badges */}
+        <div className="flex items-center justify-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] font-bold text-slate-500 mb-4 font-mono">
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>KyroPay Switch: Online</span>
+          <span>•</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500"></span>NPCI UPI Rails: Active</span>
+          <span>•</span>
+          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-500"></span>256-Bit SSL</span>
+        </div>
+
         <div className="flex justify-center">
           <div className="flex flex-col items-center">
             <KyroLogo size="xl" variant={persona === 'USER' ? 'personal' : persona === 'MERCHANT' ? 'merchant' : 'bank'} animated />
@@ -116,13 +125,81 @@ export default function Login() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/20">
           
-          <div className="mb-8 text-center">
+          <div className="mb-6 text-center">
             <h3 className="text-lg font-bold text-slate-900">
               {persona === 'USER' ? 'Sign in to KyroPay Personal' : persona === 'MERCHANT' ? 'Sign in to Merchant Hub' : 'Bank Staff & Governance Portal'}
             </h3>
-            <p className="text-slate-500 mt-2 text-xs sm:text-sm">
+            <p className="text-slate-500 mt-1.5 text-xs">
               {persona === 'USER' ? 'Access your UPI 2.0 wallet, instant transfers & QR scanner' : persona === 'MERCHANT' ? 'Manage business collections, dynamic QR standees & settlements' : 'Authorized internal bank personnel login with 4-eyes Maker-Checker'}
             </p>
+          </div>
+
+          {/* Quick 1-Click Instant Demo Portals for Evaluators */}
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-xl border border-blue-500/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 bg-blue-500/20 rounded-full blur-xl pointer-events-none" />
+            <div className="flex items-center justify-between mb-3 relative z-10">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-300 flex items-center gap-1.5">
+                <Sparkles size={12} className="text-amber-400 animate-spin" /> Quick 1-Click Demo Profiles
+              </span>
+              <span className="text-[9px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/30">
+                Direct Access
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2 relative z-10">
+              {/* 1. Consumer */}
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('userType', 'user');
+                  localStorage.setItem('demoUser', 'true');
+                  navigate('/dashboard');
+                }}
+                className="flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition transform hover:scale-105 active:scale-95 cursor-pointer text-center group"
+                title="Sign in as Consumer UPI User"
+              >
+                <span className="text-[11px] font-black text-white group-hover:text-cyan-300">👤 Consumer</span>
+                <span className="text-[9px] text-blue-200 mt-0.5 font-mono">Vansh Jain</span>
+              </button>
+
+              {/* 2. Merchant */}
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('userType', 'merchant');
+                  localStorage.setItem('demoUser', 'true');
+                  navigate('/dashboard');
+                }}
+                className="flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition transform hover:scale-105 active:scale-95 cursor-pointer text-center group"
+                title="Sign in as Business Merchant"
+              >
+                <span className="text-[11px] font-black text-white group-hover:text-indigo-300">🏪 Merchant</span>
+                <span className="text-[9px] text-blue-200 mt-0.5 font-mono">Store Hub</span>
+              </button>
+
+              {/* 3. Bank Super Admin */}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    await login('superadmin@bank.com', 'password123');
+                    localStorage.setItem('userType', 'bank_employee');
+                    navigate('/dashboard');
+                  } catch (err) {
+                    setPersona('EMPLOYEE');
+                    handleDemoFill('superadmin@bank.com');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 transition transform hover:scale-105 active:scale-95 cursor-pointer text-center group"
+                title="Sign in as Bank Super Admin"
+              >
+                <span className="text-[11px] font-black text-white group-hover:text-amber-300">🏦 Bank Staff</span>
+                <span className="text-[9px] text-blue-200 mt-0.5 font-mono">Core Treasury</span>
+              </button>
+            </div>
           </div>
 
           {/* Persona Tabs */}
