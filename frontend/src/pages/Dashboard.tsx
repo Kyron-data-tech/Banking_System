@@ -14,7 +14,7 @@ import {
   Camera, Search, ArrowDownLeft, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
   LogOut, Banknote, Archive, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
-  Menu, X, Bell, Plus, QrCode,
+  Menu, X, Plus, QrCode,
   Receipt, FileSpreadsheet, Building2, ArrowDownToLine
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -147,6 +147,7 @@ const Sidebar = ({ page, setPage, open, setOpen }: any) => {
 };
 
 const Topbar = ({ page, setOpen }: any) => {
+  const { user, logout } = useAuth();
   const label = navItems.find(n => n.id === page)?.label ?? 'Dashboard';
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 sticky top-0 z-10">
@@ -154,11 +155,21 @@ const Topbar = ({ page, setOpen }: any) => {
       <h1 className="text-xl font-bold text-slate-800">{label}</h1>
       <div className="ml-auto flex items-center gap-3">
         <span className="hidden sm:flex items-center gap-1.5 text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-medium">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />Backend Live
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />CBS Core Live
         </span>
-        <button className="relative text-slate-500 hover:text-slate-800">
-          <Bell size={20} />
-          <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">1</span>
+        <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
+          <div className="text-right">
+            <p className="text-xs font-bold text-slate-800 leading-tight">{user?.fullName || 'Bank Staff'}</p>
+            <p className="text-[10px] text-blue-600 font-semibold">{formatRole(user?.roles?.[0] ?? '')}</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => { logout(); window.location.href = '/'; }} 
+          title="Sign out of Core Banking CBS"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition border border-red-100 cursor-pointer"
+        >
+          <LogOut size={14} />
+          <span className="hidden sm:inline">Sign Out</span>
         </button>
       </div>
     </header>
@@ -722,6 +733,7 @@ const SmartPayForm = ({
   defaultVpa = '', 
   defaultAmount = '',
   defaultName = '',
+  availableBalance,
   onComplete,
   onOpenScanner,
   onPayViaRazorpay
@@ -729,6 +741,7 @@ const SmartPayForm = ({
   defaultVpa?: string, 
   defaultAmount?: string,
   defaultName?: string,
+  availableBalance?: number,
   onComplete: (tx?: any) => void,
   onOpenScanner?: () => void,
   onPayViaRazorpay?: (amount: number, targetVpa: string, targetName: string) => void
@@ -746,6 +759,8 @@ const SmartPayForm = ({
     const [verifiedName, setVerifiedName] = useState<string | null>(defaultName || null);
     const [showMpin, setShowMpin] = useState(false);
     const [enteredMpin, setEnteredMpin] = useState("");
+
+    const isInsufficient = availableBalance !== undefined && Number(amount) > availableBalance;
 
     useEffect(() => {
       if (defaultVpa) {
@@ -776,6 +791,13 @@ const SmartPayForm = ({
 
     const handlePayClick = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isInsufficient) {
+            setLocalToast({
+                msg: `Transaction Blocked: Insufficient Kyro balance (Available: ₹${availableBalance?.toLocaleString('en-IN') || 0}).`,
+                type: 'error'
+            });
+            return;
+        }
         setShowMpin(true);
     };
 
@@ -798,6 +820,9 @@ const SmartPayForm = ({
             if (errorMsg.includes("NPCI-U16") || errorMsg.includes("Risk Threshold")) {
                 setStatus('RISK_REJECTED');
                 setLocalToast({ msg: 'Payment rejected by NPCI risk engine.', type: 'error' });
+            } else if (errorMsg.includes("NPCI-U17") || errorMsg.includes("Insufficient Funds") || errorMsg.includes("Insufficient")) {
+                setStatus(null);
+                setLocalToast({ msg: errorMsg || 'Payment Failed: Insufficient funds in account.', type: 'error' });
             } else if (errorMsg.includes("INVALID_MPIN") || errorMsg.includes("Incorrect MPIN")) {
                 setStatus(null);
                 setLocalToast({ msg: 'Authentication Failed: Incorrect MPIN entered.', type: 'error' });
@@ -816,6 +841,28 @@ const SmartPayForm = ({
       <div className="relative">
         {localToast && <Toast message={localToast.msg} type={localToast.type} onClose={() => setLocalToast(null)} />}
         
+        {/* Scanned QR Payee Notification Banner */}
+        {defaultVpa && (
+          <div className="mb-4 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
+                <QrCode size={20} />
+              </div>
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">QR Payee Fetched</span>
+                <p className="text-sm font-black text-slate-900 mt-0.5">{verifiedName || vpa}</p>
+                <p className="text-xs font-mono text-slate-500">{vpa}</p>
+              </div>
+            </div>
+            {amount && (
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">QR Amount</span>
+                <p className="text-base font-black text-slate-900">₹{amount}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {onOpenScanner && (
           <div 
             onClick={onOpenScanner}
@@ -844,7 +891,7 @@ const SmartPayForm = ({
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-500 uppercase">To UPI ID / Number</label>
               <div className="flex items-center gap-1">
-                {['vanshj7818@okkyro', 'merchant@okkyro'].map(testVpa => (
+                {['consumer@okkyro', 'merchant@okkyro'].map(testVpa => (
                   <button
                     key={testVpa}
                     type="button"
@@ -886,6 +933,16 @@ const SmartPayForm = ({
             </div>
             <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
   placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
+
+            {/* Insufficient Balance Error Notice */}
+            {isInsufficient && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 animate-fade-in">
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-red-600" />
+                <div className="text-xs">
+                  <span className="font-bold">Insufficient Kyro Balance!</span> Available balance: <strong>₹{availableBalance?.toLocaleString('en-IN') || 0}</strong>. You cannot transfer ₹{amount} from your Kyro balance. Please enter a lower amount or click <strong>Pay via Real Bank Account</strong> below.
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 pt-1">
@@ -904,10 +961,14 @@ const SmartPayForm = ({
 
             <button 
               type="submit" 
-              disabled={loading || Number(amount) <= 0 || !vpa} 
-              className="w-full py-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 rounded-xl font-bold text-xs flex justify-center items-center gap-2 disabled:opacity-50 transition active:scale-95 cursor-pointer"
+              disabled={loading || Number(amount) <= 0 || !vpa || isInsufficient} 
+              className={`w-full py-3 rounded-xl font-bold text-xs flex justify-center items-center gap-2 transition active:scale-95 cursor-pointer ${
+                isInsufficient 
+                  ? 'bg-red-50 border border-red-200 text-red-600 cursor-not-allowed opacity-80' 
+                  : 'bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 disabled:opacity-50'
+              }`}
             >
-              Pay from Kyro Internal Balance
+              {isInsufficient ? '❌ Insufficient Kyro Balance (Blocked)' : 'Pay from Kyro Internal Balance'}
             </button>
           </div>
     
@@ -1162,7 +1223,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         accountNumber: '•••• 4321',
         rawAccountNumber: '50100412344321',
         ifsc: 'HDFC0001234',
-        accountHolder: user?.fullName || backendUser?.fullName || 'Vansh Jain',
+        accountHolder: user?.fullName || backendUser?.fullName || 'Demo Consumer',
         accountType: 'SAVINGS',
         isPrimary: true,
         linkedAt: '2026-10-15T10:00:00Z',
@@ -1186,7 +1247,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
 
     const totalIn = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
     const totalOut = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
-    const currentBalance = 100000 + totalIn - totalOut;
+    const currentBalance = Math.max(0, 100000 + totalIn - totalOut);
 
 
       useEffect(() => {
@@ -1206,7 +1267,10 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   }, [refresh, user, backendUser]);
 
   const contacts = [
-    { name: 'My Number', phone: '7818086344', vpa: '7818086344@ybl' },{ name: 'Vansh (My Number)', phone: '7818086344', vpa: '7818086344@kyro' }];
+    { name: 'Self Account', phone: '9876543210', vpa: 'self@okkyro' },
+    { name: 'Aakash Sharma', phone: '9812345678', vpa: 'aakash@okaxis' },
+    { name: 'Priya Verma', phone: '9823456789', vpa: 'priya@okhdfc' }
+  ];
 
   return (
     <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
@@ -1408,6 +1472,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
               defaultVpa={scannedPayee?.vpa || ''}
               defaultAmount={scannedPayee?.amount || ''}
               defaultName={scannedPayee?.payeeName || ''}
+              availableBalance={currentBalance}
               onOpenScanner={() => setShowScanner(true)}
               onComplete={(createdTx) => {
                 setRefresh(r => r + 1);
@@ -1537,7 +1602,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
       <LinkBankAccountModal
         isOpen={showLinkBankModal}
         onClose={() => setShowLinkBankModal(false)}
-        userName={user?.fullName || backendUser?.fullName || 'Vansh Jain'}
+        userName={user?.fullName || backendUser?.fullName || 'Demo Consumer'}
         onAccountLinked={handleAccountLinked}
       />
     </MobileDashboardLayout>
@@ -1601,7 +1666,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
 
     
       useEffect(() => {
-      const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'vanshj7818@gmail.com';
+      const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyropay.com';
     
     const fetchHistory = () => {
         Promise.all([
@@ -1794,6 +1859,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
               defaultVpa={scannedPayee?.vpa || ''}
               defaultAmount={scannedPayee?.amount || ''}
               defaultName={scannedPayee?.payeeName || ''}
+              availableBalance={unsettledBalance}
               onOpenScanner={() => setShowScanner(true)}
               onComplete={(createdTx) => {
                 setRefresh(r => r + 1);
@@ -2021,29 +2087,30 @@ const Dashboard = () => {
   const { user: clerkUser } = useUser();
   const { user: backendUser } = useAuth();
   
-  // THREE-TIER ROUTING LOGIC (Role strictly determined by login persona)
+  // THREE-TIER ROUTING LOGIC (Role strictly determined by login persona & authority)
   const email = clerkUser?.primaryEmailAddress?.emailAddress || backendUser?.email || '';
-  const isMerchant = localStorage.getItem('userType') === 'merchant';
-  const isBankEmployee = !!backendUser && !clerkUser && localStorage.getItem('userType') === 'bank_employee';
-  
-  
+  const userType = localStorage.getItem('userType');
+  const hasBankRole = !!backendUser?.roles && backendUser.roles.some((r: string) => 
+    r.startsWith('ROLE_BANK_') || r.startsWith('ROLE_CORP_') || r.includes('ADMIN') || r.includes('OPERATIONS') || r.includes('AUDITOR') || r.includes('COMPLIANCE')
+  );
+  const isBankEmployee = userType === 'bank_employee' || (!userType && hasBankRole);
+  const isMerchant = !isBankEmployee && userType === 'merchant';
 
+  const [page, setPage] = useState<Page>('dashboard');
 
-const [page, setPage] = useState<Page>('dashboard');
-
-  
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [verifiedUpiId, setVerifiedUpiId] = useState<string | null>(null);
   const [newUpiId, setNewUpiId] = useState('');
   const [newMpin, setNewMpin] = useState('');
   const [onboardingLoading, setOnboardingLoading] = useState(false);
-    const [onboardError, setOnboardError] = useState<string | null>(null);
-  
-  
-  
+  const [onboardError, setOnboardError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (email && !isBankEmployee) {
+    if (isBankEmployee || isMerchant) {
+      setNeedsOnboarding(false);
+      return;
+    }
+    if (email) {
       upiApi.getUpiProfile(email).then(res => {
         if (!res.data.hasUpi) {
           setNeedsOnboarding(true);
@@ -2054,7 +2121,7 @@ const [page, setPage] = useState<Page>('dashboard');
          setNeedsOnboarding(true);
       });
     }
-  }, [email, isBankEmployee]);
+  }, [email, isBankEmployee, isMerchant]);
 
 
   const handleOnboard = async (e: any) => {
@@ -2120,7 +2187,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     <>
 
 
-      {needsOnboarding && (
+      {!isBankEmployee && !isMerchant && needsOnboarding && (
         <div className="fixed inset-0 bg-slate-900/90 z-[9999] flex flex-col items-center justify-center p-4">
             <div className="bg-white rounded-3xl w-full max-w-md p-8 text-center shadow-2xl">
                 <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><ShieldCheck size={32} /></div>

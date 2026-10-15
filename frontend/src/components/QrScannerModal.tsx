@@ -32,47 +32,73 @@ export function parseUpiQrString(raw: string): ScannedUpiPayload | null {
   if (!raw) return null;
   const trimmed = raw.trim();
 
-  // 1. Standard NPCI upi://pay URI
-  if (trimmed.toLowerCase().startsWith('upi://pay')) {
+  // Try decoding if whole string is URI encoded (e.g. upi%3A%2F%2Fpay...)
+  let normalized = trimmed;
+  if (normalized.toLowerCase().startsWith('upi%3a') || normalized.includes('%26pa%3d') || normalized.includes('%3fpa%3d') || normalized.includes('%20')) {
     try {
-      const url = new URL(trimmed);
-      const pa = url.searchParams.get('pa') || '';
-      const pn = url.searchParams.get('pn') || '';
-      const am = url.searchParams.get('am') || '';
-      const tn = url.searchParams.get('tn') || '';
+      normalized = decodeURIComponent(normalized);
+    } catch (e) {}
+  }
+
+  // 1. Look for upi://pay pattern anywhere in the string or URL
+  const upiSchemeIdx = normalized.toLowerCase().indexOf('upi://pay');
+  if (upiSchemeIdx !== -1) {
+    const upiPart = normalized.substring(upiSchemeIdx);
+    const queryIdx = upiPart.indexOf('?');
+    if (queryIdx !== -1) {
+      const queryString = upiPart.substring(queryIdx + 1);
+      const params = new URLSearchParams(queryString);
+      
+      const pa = params.get('pa') || params.get('PA') || '';
+      const pn = params.get('pn') || params.get('PN') || '';
+      const am = params.get('am') || params.get('AM') || '';
+      const tn = params.get('tn') || params.get('TN') || '';
+
       if (pa) {
         return {
-          vpa: decodeURIComponent(pa),
-          payeeName: pn ? decodeURIComponent(pn) : undefined,
-          amount: am || undefined,
-          note: tn ? decodeURIComponent(tn) : undefined,
+          vpa: decodeURIComponent(pa.replace(/\+/g, ' ')),
+          payeeName: pn ? decodeURIComponent(pn.replace(/\+/g, ' ')) : undefined,
+          amount: am ? am.trim() : undefined,
+          note: tn ? decodeURIComponent(tn.replace(/\+/g, ' ')) : undefined,
           raw: trimmed
         };
-      }
-    } catch {
-      // Manual fallback parse
-      const queryIdx = trimmed.indexOf('?');
-      if (queryIdx !== -1) {
-        const params = new URLSearchParams(trimmed.slice(queryIdx + 1));
-        const pa = params.get('pa');
-        if (pa) {
-          return {
-            vpa: decodeURIComponent(pa),
-            payeeName: params.get('pn') ? decodeURIComponent(params.get('pn')!) : undefined,
-            amount: params.get('am') || undefined,
-            note: params.get('tn') ? decodeURIComponent(params.get('tn')!) : undefined,
-            raw: trimmed
-          };
-        }
       }
     }
   }
 
-  // 2. Direct VPA handle (e.g., user@okkyro, 9876543210@ybl, merchant@icici)
-  if (trimmed.includes('@') && !trimmed.includes(' ') && trimmed.length >= 5) {
+  // 2. Generic URL parameters with pa= (e.g. PhonePe / BharatPe / Paytm / GPay web redirect links)
+  if (normalized.toLowerCase().includes('pa=')) {
+    try {
+      const queryIdx = normalized.indexOf('?');
+      if (queryIdx !== -1) {
+        const params = new URLSearchParams(normalized.substring(queryIdx + 1));
+        const pa = params.get('pa') || params.get('PA');
+        if (pa) {
+          const pn = params.get('pn') || params.get('PN');
+          const am = params.get('am') || params.get('AM');
+          const tn = params.get('tn') || params.get('TN');
+          return {
+            vpa: decodeURIComponent(pa.replace(/\+/g, ' ')),
+            payeeName: pn ? decodeURIComponent(pn.replace(/\+/g, ' ')) : undefined,
+            amount: am ? am.trim() : undefined,
+            note: tn ? decodeURIComponent(tn.replace(/\+/g, ' ')) : undefined,
+            raw: trimmed
+          };
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 3. Regex match for standard UPI handles (e.g. 9876543210@paytm, store@okhdfc, user@ybl)
+  const vpaRegex = /[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}/;
+  const match = normalized.match(vpaRegex);
+  if (match) {
+    const vpa = match[0];
+    const amMatch = normalized.match(/(?:am|amount|rs|inr)[=:\s]+([0-9]+(?:\.[0-9]{1,2})?)/i);
     return {
-      vpa: trimmed,
-      payeeName: trimmed.split('@')[0],
+      vpa,
+      payeeName: vpa.split('@')[0],
+      amount: amMatch ? amMatch[1] : undefined,
       raw: trimmed
     };
   }
@@ -201,7 +227,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
     return () => stopCamera();
   }, [isOpen, activeTab, startCamera, stopCamera]);
 
-  // Handle Image File Upload (e.g. from WhatsApp, Gallery, Screenshot)
+  // Handle Image File Upload (supports PhonePe, GPay, Paytm, BharatPe, BHIM screenshots & photos)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -211,28 +237,59 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setIsProcessingImage(false);
-          return;
+        // Multi-resolution canvas scanner helper
+        const tryScanAtDimensions = (targetW: number, targetH: number): string | null => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (!ctx) return null;
+            ctx.drawImage(img, 0, 0, targetW, targetH);
+            const imgData = ctx.getImageData(0, 0, targetW, targetH);
+            const res = jsQR(imgData.data, imgData.width, imgData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+            return res?.data || null;
+          } catch (e) {
+            return null;
+          }
+        };
+
+        let detectedRaw: string | null = null;
+        const maxDimension = Math.max(img.width, img.height);
+
+        // Pass 1: Scaled to max 1024px if high-res phone camera photo
+        if (maxDimension > 1024) {
+          const s = 1024 / maxDimension;
+          detectedRaw = tryScanAtDimensions(Math.round(img.width * s), Math.round(img.height * s));
+        } else {
+          detectedRaw = tryScanAtDimensions(img.width, img.height);
         }
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        // Pass 2: 720px width (ideal for standard mobile screenshots)
+        if (!detectedRaw && img.width !== 720) {
+          const s = 720 / img.width;
+          detectedRaw = tryScanAtDimensions(720, Math.round(img.height * s));
+        }
+
+        // Pass 3: 480px width (for compact/embedded QRs)
+        if (!detectedRaw && img.width !== 480) {
+          const s = 480 / img.width;
+          detectedRaw = tryScanAtDimensions(480, Math.round(img.height * s));
+        }
+
         setIsProcessingImage(false);
 
-        if (code && code.data) {
-          const parsed = parseUpiQrString(code.data);
+        if (detectedRaw) {
+          const parsed = parseUpiQrString(detectedRaw);
           if (parsed) {
             handleDetected(parsed);
           } else {
-            alert(`QR detected, but not a recognized UPI format: ${code.data}`);
+            alert(`QR detected, but not a recognized UPI format:\n${detectedRaw}`);
           }
         } else {
-          alert('No QR code could be found in the uploaded image. Please ensure the QR is clear and visible.');
+          alert('No QR code could be found in the uploaded image. Please ensure the QR is clear and well-lit.');
         }
       };
       img.src = event.target?.result as string;
@@ -243,23 +300,23 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
   // Demo Presets for Hackathon / Presentation
   const demoQrs = [
     {
-      title: 'Vansh Jain (Merchant)',
-      handle: 'vanshj7818@okkyro',
-      name: 'Vansh Jain',
+      title: 'Metro Supermarket (Merchant)',
+      handle: 'metro.supermarket@okkyro',
+      name: 'Metro Supermarket Retail',
       presetAmount: '1195.00',
       icon: ShoppingBag,
       color: 'bg-indigo-50 border-indigo-200 text-indigo-700'
     },
     {
-      title: 'MJ Style (Personal)',
-      handle: 'mjstyle65@okkyro',
-      name: 'MJ Style',
-      presetAmount: '500.00',
+      title: 'Quick Grocery Store (Merchant)',
+      handle: 'grocery.mart@okkyro',
+      name: 'Quick Grocery Store',
+      presetAmount: '450.00',
       icon: Zap,
       color: 'bg-blue-50 border-blue-200 text-blue-700'
     },
     {
-      title: 'Starbucks Coffee',
+      title: 'Starbucks Coffee POS',
       handle: 'starbucks@upi',
       name: 'Starbucks Store #402',
       presetAmount: '280.00',
@@ -268,8 +325,8 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
     },
     {
       title: 'NPCI MDR Split Test (> ₹2,000)',
-      handle: 'vanshj7818@okkyro',
-      name: 'Merchant Corporate Store',
+      handle: 'corporate.store@okkyro',
+      name: 'Merchant Corporate Hub',
       presetAmount: '5500.00',
       icon: Sparkles,
       color: 'bg-purple-50 border-purple-200 text-purple-700'
@@ -420,7 +477,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
                     type="text"
                     value={manualInput}
                     onChange={(e) => setManualInput(e.target.value)}
-                    placeholder="e.g. upi://pay?pa=vanshj7818@okkyro&pn=Vansh"
+                    placeholder="e.g. upi://pay?pa=store@okkyro&pn=SuperMart&am=250"
                     className="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button

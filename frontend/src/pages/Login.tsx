@@ -68,6 +68,13 @@ export default function Login() {
         });
       }
       await login(email, useOtp ? otp : password);
+      if (persona === 'EMPLOYEE') {
+        localStorage.setItem('userType', 'bank_employee');
+      } else if (persona === 'MERCHANT') {
+        localStorage.setItem('userType', 'merchant');
+      } else {
+        localStorage.setItem('userType', 'user');
+      }
       navigate('/dashboard');
     } catch (err: any) {
       if (isRegister && err.message?.toLowerCase().includes('already registered')) {
@@ -159,7 +166,7 @@ export default function Login() {
                 title="Sign in as Consumer UPI User"
               >
                 <span className="text-[11px] font-black text-white group-hover:text-cyan-300">👤 Consumer</span>
-                <span className="text-[9px] text-blue-200 mt-0.5 font-mono">Vansh Jain</span>
+                <span className="text-[9px] text-blue-200 mt-0.5 font-mono">Personal Account</span>
               </button>
 
               {/* 2. Merchant */}
@@ -406,7 +413,10 @@ export default function Login() {
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleDemoFill(account.email)}
+                    onClick={() => {
+                      handleDemoFill(account.email);
+                      localStorage.setItem('userType', 'bank_employee');
+                    }}
                     className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors hover:shadow-sm ${account.badgeColor}`}
                   >
                     {account.label}

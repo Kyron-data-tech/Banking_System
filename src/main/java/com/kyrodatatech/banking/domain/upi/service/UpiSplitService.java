@@ -60,6 +60,24 @@ public class UpiSplitService {
             }
         }
 
+        // 2. Strict Balance Verification (Prevent Negative Balance)
+        List<UpiParentTransaction> outflows = getOutflowsForSender(senderId);
+        List<UpiParentTransaction> inflows = getInflowsForReceiver(senderId);
+        BigDecimal totalOut = outflows.stream()
+                .filter(t -> "COMPLETED".equalsIgnoreCase(t.getStatus()))
+                .map(UpiParentTransaction::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalIn = inflows.stream()
+                .filter(t -> "COMPLETED".equalsIgnoreCase(t.getStatus()))
+                .map(UpiParentTransaction::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal baseBalance = new BigDecimal("100000.00");
+        BigDecimal availableBalance = baseBalance.add(totalIn).subtract(totalOut);
+        if (totalAmount.compareTo(availableBalance) > 0) {
+            BigDecimal displayBal = availableBalance.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : availableBalance;
+            throw new RuntimeException("NPCI-U17: Insufficient Funds in Kyro Account. Available balance: INR " + displayBal);
+        }
+
         String parentRef = "UPI-P-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         
         // NPCI SIMULATION: Risk Check

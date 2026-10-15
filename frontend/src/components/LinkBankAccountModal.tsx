@@ -89,7 +89,7 @@ export const LinkBankAccountModal: React.FC<LinkBankAccountModalProps> = ({
       
       // Simulation: Step 2
       setTimeout(() => {
-        setVerificationStep('Validating Account Holder Name matching: ' + (userName || 'Vansh Jain') + '...');
+        setVerificationStep('Validating Account Holder Name matching: ' + (userName || 'Authorized Account Holder') + '...');
         
         // Simulation: Step 3 (Success)
         setTimeout(() => {
@@ -103,7 +103,7 @@ export const LinkBankAccountModal: React.FC<LinkBankAccountModalProps> = ({
             accountNumber: masked,
             rawAccountNumber: accountNumber,
             ifsc: ifsc.toUpperCase(),
-            accountHolder: userName || 'Vansh Jain',
+            accountHolder: userName || 'Authorized Account Holder',
             accountType,
             isPrimary: true,
             linkedAt: new Date().toISOString(),
@@ -282,7 +282,7 @@ export const LinkBankAccountModal: React.FC<LinkBankAccountModalProps> = ({
               {/* Verified Name Notice */}
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-[11px] text-slate-600">
                 <span className="font-semibold">KYC Holder Name:</span>
-                <span className="font-black text-slate-900">{userName || 'Vansh Jain'}</span>
+                <span className="font-black text-slate-900">{userName || 'Authorized Account Holder'}</span>
               </div>
 
               {/* Action Button */}

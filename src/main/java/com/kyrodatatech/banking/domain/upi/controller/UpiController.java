@@ -62,13 +62,17 @@ public class UpiController {
                 "transaction", result
             ));
         } catch(Exception e) {
-            if (e.getMessage().equals("INVALID_MPIN")) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Payment failed";
+            if ("INVALID_MPIN".equals(msg)) {
                 return ResponseEntity.status(400).body(Map.of("error", "Incorrect MPIN"));
             }
-            if (e.getMessage().contains("NPCI-U16")) {
-                return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+            if (msg.contains("NPCI-U16")) {
+                return ResponseEntity.status(403).body(Map.of("error", msg));
             }
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            if (msg.contains("NPCI-U17") || msg.contains("Insufficient Funds")) {
+                return ResponseEntity.status(400).body(Map.of("error", msg));
+            }
+            return ResponseEntity.badRequest().body(Map.of("error", msg));
         }
     }
 
