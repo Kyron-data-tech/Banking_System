@@ -892,10 +892,10 @@ const SmartPayForm = ({
                 type="button" 
                 onClick={() => onPayViaRazorpay(Number(amount) || 500, vpa || 'merchant@okkyro', verifiedName || vpa || 'Merchant Store')}
                 className="w-full py-4 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer border border-white/20"
-                title="Debit directly from your Real Bank Account via Razorpay"
+                title="Debit directly from your Real Bank Account via KyroPay Instant Bank Switch"
               >
                 <Building2 size={18} className="text-yellow-300" />
-                <span>⚡ Pay via Real Bank (Razorpay Gateway)</span>
+                <span>⚡ Pay via Real Bank Account (UPI / NetBanking)</span>
                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ml-1">UPI / Cards</span>
               </button>
             )}
@@ -963,15 +963,13 @@ const SmartPayForm = ({
     );
 };
 
-const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab, onSwitchRole }: any) => {
+const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab }: any) => {
   const { logout, user: backendUser } = useAuth();
   const { user: clerkUser } = useUser();
   
   const handleLogout = () => {
     if (backendUser) logout();
   };
-
-  const isBusiness = title?.includes('Business');
 
   return (
     <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[700px] md:rounded-[40px] shadow-2xl border border-white/40 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10">
@@ -1003,40 +1001,6 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             <div className="mt-2 bg-white/20 rounded-xl p-2 border border-white/30 backdrop-blur-md w-full max-w-[240px]">
               <p className="text-xs text-blue-100 uppercase font-bold tracking-wider mb-0.5 text-center">Your UPI ID</p>
               <p className="text-sm font-bold truncate px-2 text-center">{upiId}</p>
-            </div>
-
-            {/* SWITCH DASHBOARD ROLE (Personal ⇄ Merchant) */}
-            <div className="mt-3 bg-black/40 rounded-2xl p-1 border border-white/25 flex gap-1 w-full max-w-[240px]">
-              <button
-                type="button"
-                onClick={() => {
-                  if (onSwitchRole) onSwitchRole('personal');
-                  else {
-                    localStorage.setItem('userType', 'personal');
-                    window.location.reload();
-                  }
-                }}
-                className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer ${
-                  !isBusiness ? 'bg-white text-blue-700 shadow-md' : 'text-blue-100 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                👤 Personal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onSwitchRole) onSwitchRole('merchant');
-                  else {
-                    localStorage.setItem('userType', 'merchant');
-                    window.location.reload();
-                  }
-                }}
-                className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer ${
-                  isBusiness ? 'bg-white text-indigo-700 shadow-md' : 'text-indigo-100 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                🏪 Business
-              </button>
             </div>
           </div>
         </div>
@@ -1111,7 +1075,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   );
 };
 
-const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: string | null; onSwitchRole?: (role: 'personal' | 'merchant') => void }) => {
+const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
     const [showScanner, setShowScanner] = useState(false);
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [balanceVisible, setBalanceVisible] = useState(false);
@@ -1178,7 +1142,7 @@ const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: stri
     { name: 'My Number', phone: '7818086344', vpa: '7818086344@ybl' },{ name: 'Vansh (My Number)', phone: '7818086344', vpa: '7818086344@kyro' }];
 
   return (
-    <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab} onSwitchRole={onSwitchRole}>
+    <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
@@ -1261,7 +1225,7 @@ const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: stri
             </div>
           </Modal>
 
-          {/* RAZORPAY REAL BANK GATEWAY HUB (PERSONAL) */}
+          {/* KYROPAY DIRECT REAL BANK SWITCH (PERSONAL) */}
           <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-3xl p-5 mb-6 border border-blue-500/30 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl" />
             <div className="flex items-center justify-between mb-3 relative z-10">
@@ -1271,10 +1235,10 @@ const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: stri
                 </div>
                 <div>
                   <h4 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-2">
-                    Razorpay Bank Gateway
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">Active</span>
+                    KyroPay Direct Bank Switch
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">NPCI / 256-Bit SSL</span>
                   </h4>
-                  <p className="text-[11px] text-blue-200">Debit money directly from real bank account into KyroPay</p>
+                  <p className="text-[11px] text-blue-200">Debit money directly from your real bank account via UPI / NetBanking</p>
                 </div>
               </div>
             </div>
@@ -1308,9 +1272,9 @@ const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: stri
                 setRazorpayTargetName('');
                 setShowRazorpayModal(true);
               }}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl text-xs shadow-md flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer relative z-10 border border-blue-400/30"
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl text-xs shadow-md flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer relative z-10 border border-blue-400/30"
             >
-              <Plus size={16} /> Open Razorpay Secure Bank Checkout
+              <Plus size={16} /> Deposit Funds via Bank Account (UPI / NetBanking)
             </button>
           </div>
 
@@ -1435,7 +1399,7 @@ const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: stri
   );
 };
 
-const MerchantDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: string | null; onSwitchRole?: (role: 'personal' | 'merchant') => void }) => {
+const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
     const [showScanner, setShowScanner] = useState(false);
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
@@ -1522,7 +1486,7 @@ const MerchantDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: str
 
   return (
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
-      <MobileDashboardLayout title="KyroPay Business Hub" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab} onSwitchRole={onSwitchRole}>
+      <MobileDashboardLayout title="KyroPay Business Hub" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
@@ -1585,7 +1549,7 @@ const MerchantDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: str
               </button>
             </div>
 
-            {/* RAZORPAY REAL BANK GATEWAY HUB (MERCHANT) */}
+            {/* KYROPAY DIRECT REAL BANK SWITCH (MERCHANT) */}
             <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-3xl p-5 mb-6 border border-indigo-500/30 shadow-xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl" />
               <div className="flex items-center justify-between mb-3 relative z-10">
@@ -1595,8 +1559,8 @@ const MerchantDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: str
                   </div>
                   <div>
                     <h4 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-2">
-                      Razorpay Bank Gateway
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">Active</span>
+                      KyroPay Direct Bank Switch
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">NPCI / 256-Bit SSL</span>
                     </h4>
                     <p className="text-[11px] text-indigo-200">Real Bank UPI, NetBanking & Debit Cards</p>
                   </div>
@@ -1891,20 +1855,9 @@ const Dashboard = () => {
   const { user: clerkUser } = useUser();
   const { user: backendUser } = useAuth();
   
-  // THREE-TIER ROUTING LOGIC WITH INTERACTIVE TOGGLE
+  // THREE-TIER ROUTING LOGIC (Role strictly determined by login persona)
   const email = clerkUser?.primaryEmailAddress?.emailAddress || backendUser?.email || '';
-  const [userRoleMode, setUserRoleMode] = useState<'personal' | 'merchant'>(() => {
-    const saved = localStorage.getItem('userType');
-    if (saved === 'personal') return 'personal';
-    if (saved === 'merchant') return 'merchant';
-    return email.toLowerCase().includes('merchant') ? 'merchant' : 'personal';
-  });
-
-  const handleSwitchRole = (newRole: 'personal' | 'merchant') => {
-    localStorage.setItem('userType', newRole);
-    setUserRoleMode(newRole);
-  };
-
+  const isMerchant = localStorage.getItem('userType') === 'merchant';
   const isBankEmployee = !!backendUser && !clerkUser && localStorage.getItem('userType') === 'bank_employee';
   
   
@@ -1980,10 +1933,10 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 
 
   let DashboardContent = null;
-  if (userRoleMode === 'merchant') {
-    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} onSwitchRole={handleSwitchRole} />;
+  if (isMerchant) {
+    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} />;
   } else if (!isBankEmployee) {
-    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} onSwitchRole={handleSwitchRole} />;
+    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} />;
   } else {
     DashboardContent = (
       <div className="flex h-screen bg-white/50 backdrop-blur-3xl overflow-hidden font-sans relative z-10">
