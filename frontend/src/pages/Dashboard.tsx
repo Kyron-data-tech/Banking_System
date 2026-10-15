@@ -839,7 +839,21 @@ const SmartPayForm = ({
 
         <form onSubmit={handlePayClick} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">To UPI ID / Number</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase">To UPI ID / Number</label>
+              <div className="flex items-center gap-1">
+                {['vanshj7818@okkyro', 'merchant@okkyro'].map(testVpa => (
+                  <button
+                    key={testVpa}
+                    type="button"
+                    onClick={() => { setVpa(testVpa); setVerifiedName(testVpa.split('@')[0]); }}
+                    className="text-[10px] bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 font-semibold px-1.5 py-0.5 rounded border border-slate-200 transition"
+                  >
+                    {testVpa.split('@')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="flex gap-2">
                 <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="name@okkyro or 9876543210@ybl" 
   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium" />
@@ -853,29 +867,46 @@ const SmartPayForm = ({
             {verifiedName && <p className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1"><CheckCircle2 size={14}/> {verifiedName}</p>}
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Amount (₹)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase">Amount (₹)</label>
+              <div className="flex items-center gap-1">
+                {[100, 500, 1000].map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setAmount(String(val))}
+                    className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 font-bold px-2 py-0.5 rounded border border-slate-200 transition"
+                  >
+                    ₹{val}
+                  </button>
+                ))}
+              </div>
+            </div>
             <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
   placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
           </div>
-          <div className="flex gap-2">
-            <button 
-              type="submit" 
-              disabled={loading || Number(amount) <= 0 || !vpa} 
-              className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 cursor-pointer"
-            >
-              Pay from Account
-            </button>
+
+          <div className="space-y-2 pt-1">
             {onPayViaRazorpay && (
               <button 
                 type="button" 
-                onClick={() => onPayViaRazorpay(Number(amount), vpa, verifiedName || vpa)}
-                disabled={loading || Number(amount) <= 0 || !vpa} 
-                className="py-4 px-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 cursor-pointer"
+                onClick={() => onPayViaRazorpay(Number(amount) || 500, vpa || 'merchant@okkyro', verifiedName || vpa || 'Merchant Store')}
+                className="w-full py-4 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer border border-white/20"
                 title="Debit directly from your Real Bank Account via Razorpay"
               >
-                <Building2 size={16} /> Pay via Bank
+                <Building2 size={18} className="text-yellow-300" />
+                <span>⚡ Pay via Real Bank (Razorpay Gateway)</span>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ml-1">UPI / Cards</span>
               </button>
             )}
+
+            <button 
+              type="submit" 
+              disabled={loading || Number(amount) <= 0 || !vpa} 
+              className="w-full py-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 rounded-xl font-bold text-xs flex justify-center items-center gap-2 disabled:opacity-50 transition active:scale-95 cursor-pointer"
+            >
+              Pay from Kyro Internal Balance
+            </button>
           </div>
     
           {status === 'SPLIT_SUCCESS' && (
@@ -932,13 +963,15 @@ const SmartPayForm = ({
     );
 };
 
-const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab }: any) => {
+const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab, onSwitchRole }: any) => {
   const { logout, user: backendUser } = useAuth();
   const { user: clerkUser } = useUser();
   
   const handleLogout = () => {
     if (backendUser) logout();
   };
+
+  const isBusiness = title?.includes('Business');
 
   return (
     <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[700px] md:rounded-[40px] shadow-2xl border border-white/40 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10">
@@ -967,9 +1000,43 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
               </span>
             </div>
             <p className="font-bold text-white md:text-xl">{backendUser?.fullName || clerkUser?.fullName || 'Kyro User'}</p>
-            <div className="mt-2 bg-white/20 rounded-xl p-2 border border-white/30 backdrop-blur-md">
+            <div className="mt-2 bg-white/20 rounded-xl p-2 border border-white/30 backdrop-blur-md w-full max-w-[240px]">
               <p className="text-xs text-blue-100 uppercase font-bold tracking-wider mb-0.5 text-center">Your UPI ID</p>
-              <p className="text-sm font-bold truncate px-2">{upiId}</p>
+              <p className="text-sm font-bold truncate px-2 text-center">{upiId}</p>
+            </div>
+
+            {/* SWITCH DASHBOARD ROLE (Personal ⇄ Merchant) */}
+            <div className="mt-3 bg-black/40 rounded-2xl p-1 border border-white/25 flex gap-1 w-full max-w-[240px]">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSwitchRole) onSwitchRole('personal');
+                  else {
+                    localStorage.setItem('userType', 'personal');
+                    window.location.reload();
+                  }
+                }}
+                className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer ${
+                  !isBusiness ? 'bg-white text-blue-700 shadow-md' : 'text-blue-100 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                👤 Personal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSwitchRole) onSwitchRole('merchant');
+                  else {
+                    localStorage.setItem('userType', 'merchant');
+                    window.location.reload();
+                  }
+                }}
+                className={`flex-1 py-1.5 px-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1 cursor-pointer ${
+                  isBusiness ? 'bg-white text-indigo-700 shadow-md' : 'text-indigo-100 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                🏪 Business
+              </button>
             </div>
           </div>
         </div>
@@ -1044,7 +1111,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   );
 };
 
-const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
+const PhonePeDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: string | null; onSwitchRole?: (role: 'personal' | 'merchant') => void }) => {
     const [showScanner, setShowScanner] = useState(false);
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [balanceVisible, setBalanceVisible] = useState(false);
@@ -1111,7 +1178,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
     { name: 'My Number', phone: '7818086344', vpa: '7818086344@ybl' },{ name: 'Vansh (My Number)', phone: '7818086344', vpa: '7818086344@kyro' }];
 
   return (
-    <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab} onSwitchRole={onSwitchRole}>
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
@@ -1193,6 +1260,60 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                </button>
             </div>
           </Modal>
+
+          {/* RAZORPAY REAL BANK GATEWAY HUB (PERSONAL) */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-3xl p-5 mb-6 border border-blue-500/30 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl" />
+            <div className="flex items-center justify-between mb-3 relative z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-2">
+                    Razorpay Bank Gateway
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">Active</span>
+                  </h4>
+                  <p className="text-[11px] text-blue-200">Debit money directly from real bank account into KyroPay</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mb-3 relative z-10 overflow-x-auto pb-1">
+              <span className="text-[11px] text-blue-200 font-semibold shrink-0">Quick Deposit:</span>
+              {[500, 1000, 2000, 5000].map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => {
+                    setRazorpayPurpose('ADD_FUNDS');
+                    setRazorpayAmount(amt);
+                    setRazorpayTargetVpa('');
+                    setRazorpayTargetName('');
+                    setShowRazorpayModal(true);
+                  }}
+                  className="text-xs bg-white/10 hover:bg-white/20 active:scale-95 text-white font-extrabold px-3 py-1.5 rounded-xl border border-white/20 transition shrink-0 cursor-pointer"
+                >
+                  + ₹{amt.toLocaleString('en-IN')}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRazorpayPurpose('ADD_FUNDS');
+                setRazorpayAmount(1000);
+                setRazorpayTargetVpa('');
+                setRazorpayTargetName('');
+                setShowRazorpayModal(true);
+              }}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl text-xs shadow-md flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer relative z-10 border border-blue-400/30"
+            >
+              <Plus size={16} /> Open Razorpay Secure Bank Checkout
+            </button>
+          </div>
+
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
             <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
                <Activity size={16} className="text-blue-600" /> Send Money Instantly
@@ -1314,7 +1435,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   );
 };
 
-const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
+const MerchantDashboard = ({ verifiedUpiId, onSwitchRole }: { verifiedUpiId: string | null; onSwitchRole?: (role: 'personal' | 'merchant') => void }) => {
     const [showScanner, setShowScanner] = useState(false);
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
@@ -1401,7 +1522,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
 
   return (
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
-      <MobileDashboardLayout title="KyroPay Business Hub" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+      <MobileDashboardLayout title="KyroPay Business Hub" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab} onSwitchRole={onSwitchRole}>
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
@@ -1462,6 +1583,63 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
               >
                 <FileSpreadsheet size={16} className="text-emerald-600" /> Statement
               </button>
+            </div>
+
+            {/* RAZORPAY REAL BANK GATEWAY HUB (MERCHANT) */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-3xl p-5 mb-6 border border-indigo-500/30 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl" />
+              <div className="flex items-center justify-between mb-3 relative z-10">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400">
+                    <Building2 size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-2">
+                      Razorpay Bank Gateway
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">Active</span>
+                    </h4>
+                    <p className="text-[11px] text-indigo-200">Real Bank UPI, NetBanking & Debit Cards</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-300 mb-3 relative z-10">
+                Simulate a customer paying your store via Google Pay / Cards, or deposit working capital into your merchant balance:
+              </p>
+
+              <div className="grid grid-cols-2 gap-2.5 relative z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRazorpayPurpose('PAY_MERCHANT');
+                    setRazorpayAmount(500);
+                    setRazorpayTargetVpa(verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@okkyro');
+                    setRazorpayTargetName('Business Store Collection');
+                    setShowRazorpayModal(true);
+                  }}
+                  className="p-3.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 rounded-2xl font-bold text-xs text-white shadow-md flex flex-col items-center justify-center gap-1 transition active:scale-95 border border-indigo-400/30 cursor-pointer"
+                >
+                  <CreditCard size={18} className="text-yellow-300" />
+                  <span className="font-black">Test Customer Payment</span>
+                  <span className="text-[10px] text-blue-100">Pay via GPay / HDFC / Cards</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRazorpayPurpose('ADD_FUNDS');
+                    setRazorpayAmount(2000);
+                    setRazorpayTargetVpa('');
+                    setRazorpayTargetName('');
+                    setShowRazorpayModal(true);
+                  }}
+                  className="p-3.5 bg-white/10 hover:bg-white/15 rounded-2xl font-bold text-xs text-white shadow-sm flex flex-col items-center justify-center gap-1 transition active:scale-95 border border-white/20 cursor-pointer"
+                >
+                  <Plus size={18} className="text-emerald-400" />
+                  <span className="font-black">Add Working Capital</span>
+                  <span className="text-[10px] text-indigo-200">Debit Bank into Kyro</span>
+                </button>
+              </div>
             </div>
 
             <Modal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} title="Verify Merchant PIN">
@@ -1713,10 +1891,21 @@ const Dashboard = () => {
   const { user: clerkUser } = useUser();
   const { user: backendUser } = useAuth();
   
-  // THREE-TIER ROUTING LOGIC
+  // THREE-TIER ROUTING LOGIC WITH INTERACTIVE TOGGLE
   const email = clerkUser?.primaryEmailAddress?.emailAddress || backendUser?.email || '';
-  const isMerchant = localStorage.getItem('userType') === 'merchant' || email.toLowerCase().includes('merchant');
-  const isBankEmployee = !!backendUser && !isMerchant;
+  const [userRoleMode, setUserRoleMode] = useState<'personal' | 'merchant'>(() => {
+    const saved = localStorage.getItem('userType');
+    if (saved === 'personal') return 'personal';
+    if (saved === 'merchant') return 'merchant';
+    return email.toLowerCase().includes('merchant') ? 'merchant' : 'personal';
+  });
+
+  const handleSwitchRole = (newRole: 'personal' | 'merchant') => {
+    localStorage.setItem('userType', newRole);
+    setUserRoleMode(newRole);
+  };
+
+  const isBankEmployee = !!backendUser && !clerkUser && localStorage.getItem('userType') === 'bank_employee';
   
   
 
@@ -1791,10 +1980,10 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 
 
   let DashboardContent = null;
-  if (isMerchant) {
-    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} />;
+  if (userRoleMode === 'merchant') {
+    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} onSwitchRole={handleSwitchRole} />;
   } else if (!isBankEmployee) {
-    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} />;
+    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} onSwitchRole={handleSwitchRole} />;
   } else {
     DashboardContent = (
       <div className="flex h-screen bg-white/50 backdrop-blur-3xl overflow-hidden font-sans relative z-10">
