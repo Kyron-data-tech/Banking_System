@@ -5,6 +5,7 @@ import { KyroLogo } from '../components/KyroLogo';
 import { PaymentReceiptModal } from '../components/PaymentReceiptModal';
 import { MerchantSettlementModal } from '../components/MerchantSettlementModal';
 import { AccountStatementModal } from '../components/AccountStatementModal';
+import { RazorpayCheckoutModal } from '../components/RazorpayCheckoutModal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -720,13 +721,15 @@ const SmartPayForm = ({
   defaultAmount = '',
   defaultName = '',
   onComplete,
-  onOpenScanner
+  onOpenScanner,
+  onPayViaRazorpay
 }: { 
   defaultVpa?: string, 
   defaultAmount?: string,
   defaultName?: string,
   onComplete: (tx?: any) => void,
-  onOpenScanner?: () => void
+  onOpenScanner?: () => void,
+  onPayViaRazorpay?: (amount: number, targetVpa: string, targetName: string) => void
 }) => {
     const { user } = useUser();
     const { user: backendUser } = useAuth();
@@ -854,7 +857,26 @@ const SmartPayForm = ({
             <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
   placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
           </div>
-          <button disabled={loading || Number(amount) <= 0 || !vpa} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">Proceed to Pay</button>
+          <div className="flex gap-2">
+            <button 
+              type="submit" 
+              disabled={loading || Number(amount) <= 0 || !vpa} 
+              className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 cursor-pointer"
+            >
+              Pay from Account
+            </button>
+            {onPayViaRazorpay && (
+              <button 
+                type="button" 
+                onClick={() => onPayViaRazorpay(Number(amount), vpa, verifiedName || vpa)}
+                disabled={loading || Number(amount) <= 0 || !vpa} 
+                className="py-4 px-4 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 cursor-pointer"
+                title="Debit directly from your Real Bank Account via Razorpay"
+              >
+                <Building2 size={16} /> Pay via Bank
+              </button>
+            )}
+          </div>
     
           {status === 'SPLIT_SUCCESS' && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex gap-2 mt-2">
@@ -1048,6 +1070,11 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
 
     const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
     const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
+    const [showRazorpayModal, setShowRazorpayModal] = useState<boolean>(false);
+    const [razorpayPurpose, setRazorpayPurpose] = useState<'ADD_FUNDS' | 'PAY_MERCHANT'>('ADD_FUNDS');
+    const [razorpayTargetVpa, setRazorpayTargetVpa] = useState<string>('');
+    const [razorpayTargetName, setRazorpayTargetName] = useState<string>('');
+    const [razorpayAmount, setRazorpayAmount] = useState<number>(500);
 
   const { user } = useUser();
   const { user: backendUser } = useAuth();
@@ -1113,6 +1140,24 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                 <CreditCard size={24} className="text-white" />
               </div>
             </div>
+
+            {/* Quick Real Bank Deposit Action via Razorpay */}
+            <div className="relative z-10 mt-4 pt-3 border-t border-white/15 flex items-center justify-between">
+              <span className="text-xs text-blue-100 font-medium">Real Bank Account Debit</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setRazorpayPurpose('ADD_FUNDS');
+                  setRazorpayAmount(1000);
+                  setRazorpayTargetVpa('');
+                  setRazorpayTargetName('');
+                  setShowRazorpayModal(true);
+                }}
+                className="bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 backdrop-blur-md border border-white/20 shadow-sm transition"
+              >
+                <Plus size={14} className="text-emerald-300" /> Add Money (Bank)
+              </button>
+            </div>
           </div>
           
           <Modal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} title="Check Bank Balance">
@@ -1165,6 +1210,13 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                   setActiveReceipt(createdTx);
                 }
               }} 
+              onPayViaRazorpay={(amt, targetVpa, targetName) => {
+                setRazorpayPurpose('PAY_MERCHANT');
+                setRazorpayAmount(amt);
+                setRazorpayTargetVpa(targetVpa);
+                setRazorpayTargetName(targetName);
+                setShowRazorpayModal(true);
+              }}
             />
           </div>
         </div>
@@ -1243,6 +1295,21 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         accountUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'user').split('@')[0] + '@okkyro'}
         isMerchant={false}
       />
+      <RazorpayCheckoutModal
+        isOpen={showRazorpayModal}
+        onClose={() => setShowRazorpayModal(false)}
+        userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro'}
+        defaultAmount={razorpayAmount}
+        purpose={razorpayPurpose}
+        receiverId={razorpayTargetVpa}
+        receiverName={razorpayTargetName}
+        onPaymentSuccess={(createdTx) => {
+          setRefresh(r => r + 1);
+          if (createdTx) {
+            setActiveReceipt(createdTx);
+          }
+        }}
+      />
     </MobileDashboardLayout>
   );
 };
@@ -1253,6 +1320,11 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
     const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
     const [showSettlementModal, setShowSettlementModal] = useState<boolean>(false);
     const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
+    const [showRazorpayModal, setShowRazorpayModal] = useState<boolean>(false);
+    const [razorpayPurpose, setRazorpayPurpose] = useState<'ADD_FUNDS' | 'PAY_MERCHANT'>('ADD_FUNDS');
+    const [razorpayTargetVpa, setRazorpayTargetVpa] = useState<string>('');
+    const [razorpayTargetName, setRazorpayTargetName] = useState<string>('');
+    const [razorpayAmount, setRazorpayAmount] = useState<number>(500);
 
     const { user } = useUser();
     const { user: backendUser } = useAuth();
@@ -1443,6 +1515,13 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
                   setActiveReceipt(createdTx);
                 }
               }} 
+              onPayViaRazorpay={(amt, targetVpa, targetName) => {
+                setRazorpayPurpose('PAY_MERCHANT');
+                setRazorpayAmount(amt);
+                setRazorpayTargetVpa(targetVpa);
+                setRazorpayTargetName(targetName);
+                setShowRazorpayModal(true);
+              }}
             />
           </div>
         </div>
@@ -1606,6 +1685,21 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
         accountName={user?.fullName || backendUser?.fullName || 'Merchant Business Store'}
         accountUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant').split('@')[0] + '@okkyro'}
         isMerchant={true}
+      />
+      <RazorpayCheckoutModal
+        isOpen={showRazorpayModal}
+        onClose={() => setShowRazorpayModal(false)}
+        userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyro'}
+        defaultAmount={razorpayAmount}
+        purpose={razorpayPurpose}
+        receiverId={razorpayTargetVpa}
+        receiverName={razorpayTargetName}
+        onPaymentSuccess={(createdTx) => {
+          setRefresh(r => r + 1);
+          if (createdTx) {
+            setActiveReceipt(createdTx);
+          }
+        }}
       />
     </MobileDashboardLayout>
     </>

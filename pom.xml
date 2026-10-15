@@ -144,6 +144,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Razorpay Java SDK for Real Bank UPI & Gateway Payments -->
+        <dependency>
+            <groupId>com.razorpay</groupId>
+            <artifactId>razorpay-java</artifactId>
+            <version>1.4.6</version>
+        </dependency>
+
     </dependencies>
 
     <build>

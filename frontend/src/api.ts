@@ -116,3 +116,20 @@ export const upiApi = {
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };
+
+export const razorpayApi = {
+  getConfig: () => api.get('/razorpay/config'),
+  createOrder: (data: { amount: number; userEmail: string; purpose?: string; receiverId?: string; notes?: string }) =>
+    api.post('/razorpay/create-order', data),
+  verifyPayment: (data: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature?: string;
+    amount: number;
+    userEmail: string;
+    purpose?: string;
+    receiverId?: string;
+    paymentMethod?: string;
+    bankName?: string;
+  }) => api.post('/razorpay/verify', data),
+};

@@ -58,3 +58,10 @@ logging:
   level:
     com.kyrodatatech.banking: DEBUG
     org.springframework.security: INFO
+
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_KyroPay2026}
+  key-secret: ${RAZORPAY_KEY_SECRET:KyroPaySandboxSecret2026}
+  currency: INR
+  company-name: KyroPay Core Banking
+

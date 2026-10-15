@@ -95,6 +95,7 @@ public class SecurityConfig {
                 // Anyone can hit these URLs (login page, health check, Swagger)
                 .requestMatchers(
                     "/api/v1/auth/**", "/api/auth/**", "/api/v1/upi/**", "/api/upi/**", "/api/db-fix/**",           // Login, register, refresh token
+                    "/api/razorpay/**",       // Razorpay Order Creation and Webhook/Signature Verification
                     "/swagger-ui/**",         // Swagger UI HTML/CSS/JS
                     "/swagger-ui.html",       // Swagger UI main page
                     "/v3/api-docs/**",        // OpenAPI JSON spec
