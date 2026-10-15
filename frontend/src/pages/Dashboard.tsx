@@ -1009,20 +1009,24 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
         {/* DESKTOP NAVIGATION SIDEBAR */}
         <div className="hidden md:flex flex-col gap-1.5 p-4 flex-1 mt-4 overflow-y-auto no-scrollbar pb-8 scrollbar-hide">
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
-            <Activity size={24} /> <span className="font-bold text-base">{isMerchant ? 'Overview & Collections' : 'Payments'}</span>
+            <Activity size={24} /> <span className="font-bold text-base">Payments</span>
           </div>
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={24} /> <span className="font-bold text-base">{isMerchant ? 'Settlements & History' : 'Transaction History'}</span>
-          </div>
-          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
-            <Users size={24} /> <span className="font-bold text-base">{isMerchant ? 'Customer Directory' : 'Contacts & Split'}</span>
+            <HistoryIcon size={24} /> <span className="font-bold text-base">History</span>
           </div>
           <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'qr' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('qr')}>
             <QrCode size={24} /> <span className="font-bold text-base">{isMerchant ? 'Store Standee QR' : 'My QR Code'}</span>
           </div>
-          {isMerchant && (
+          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
+            <Users size={24} /> <span className="font-bold text-base">Contacts</span>
+          </div>
+          {isMerchant ? (
             <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
-              <ShieldCheck size={24} /> <span className="font-bold text-base">API Keys (Web Integration)</span>
+              <ShieldCheck size={24} /> <span className="font-bold text-base">API Keys</span>
+            </div>
+          ) : (
+            <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'statement' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('statement')}>
+              <FileSpreadsheet size={24} /> <span className="font-bold text-base">Account Statement</span>
             </div>
           )}
           
@@ -1049,29 +1053,54 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
         </div>
       </div>
       
-      {/* MOBILE BOTTOM NAV */}
-      <div className="md:hidden bg-white border-t border-slate-200 p-4 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20">
-        <div className="flex justify-around px-2">
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('pay')}>
-            <Activity size={24} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'Overview' : 'Pay'}</span>
+      {/* MOBILE BOTTOM NAV WITH CENTER FLOATING QR CODE */}
+      <div className="md:hidden bg-white border-t border-slate-200 px-2 py-2 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20">
+        <div className="flex justify-around items-end">
+          {/* TAB 1: PAYMENTS */}
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('pay')}>
+            <Activity size={22} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className={`text-[10px] font-bold ${activeTab === 'pay' ? 'text-blue-600' : 'text-slate-500'}`}>Payments</span>
           </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('qr')}>
-            <QrCode size={24} className={activeTab === 'qr' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'QR Standee' : 'QR Code'}</span>
+
+          {/* TAB 2: HISTORY */}
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={22} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className={`text-[10px] font-bold ${activeTab === 'history' ? 'text-blue-600' : 'text-slate-500'}`}>History</span>
           </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('contact')}>
-            <Users size={24} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'Customers' : 'Contacts'}</span>
+
+          {/* TAB 3 (CENTER HERO): QR CODE */}
+          <div 
+            onClick={() => setActiveTab('qr')} 
+            className="relative -top-4 flex flex-col items-center group cursor-pointer"
+          >
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 transform group-hover:scale-110 active:scale-95 border-4 border-white ${
+              activeTab === 'qr'
+                ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white ring-4 ring-blue-200 shadow-blue-500/50'
+                : 'bg-gradient-to-tr from-slate-900 via-indigo-950 to-blue-900 text-white shadow-indigo-950/40'
+            }`}>
+              <QrCode size={26} className={activeTab === 'qr' ? 'animate-pulse' : ''} />
+            </div>
+            <span className={`text-[10px] font-black mt-0.5 ${activeTab === 'qr' ? 'text-blue-600' : 'text-slate-700'}`}>
+              QR Code
+            </span>
           </div>
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={24} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className="text-[10px] font-bold text-slate-600">{isMerchant ? 'Ledger' : 'History'}</span>
+
+          {/* TAB 4: CONTACTS */}
+          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('contact')}>
+            <Users size={22} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className={`text-[10px] font-bold ${activeTab === 'contact' ? 'text-blue-600' : 'text-slate-500'}`}>Contacts</span>
           </div>
-          {isMerchant && (
-            <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:scale-110 active:scale-95" onClick={() => setActiveTab('developer')}>
-              <ShieldCheck size={24} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
-              <span className="text-[10px] font-bold text-slate-600">API Keys</span>
+
+          {/* TAB 5: API KEYS (MERCHANT) OR STATEMENT (PERSONAL) */}
+          {isMerchant ? (
+            <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('developer')}>
+              <ShieldCheck size={22} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
+              <span className={`text-[10px] font-bold ${activeTab === 'developer' ? 'text-blue-600' : 'text-slate-500'}`}>API Keys</span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('statement')}>
+              <FileSpreadsheet size={22} className={activeTab === 'statement' ? 'text-blue-600' : 'text-slate-400'} />
+              <span className={`text-[10px] font-bold ${activeTab === 'statement' ? 'text-blue-600' : 'text-slate-500'}`}>Statement</span>
             </div>
           )}
         </div>
@@ -1354,6 +1383,24 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
           phoneNumber={user?.primaryPhoneNumber?.phoneNumber || '7818086344'}
           isMerchant={false}
         />
+      )}
+      {activeTab === 'statement' && (
+        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl text-center space-y-4 animate-fade-in">
+          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 border border-emerald-100">
+            <FileSpreadsheet size={32} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-slate-800 text-lg">Official Account Statement</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Generate and download your stamped KyroPay transaction passbook & monthly statements.</p>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setShowStatementModal(true)} 
+            className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl text-xs shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet size={16} /> Open Statement Generator
+          </button>
+        </div>
       )}
       <QrScannerModal
         isOpen={showScanner}
