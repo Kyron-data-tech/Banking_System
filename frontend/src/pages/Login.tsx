@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api';
 import { SignIn, useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { KyroLogo } from '../components/KyroLogo';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { 
 
   ShieldCheck,
@@ -89,12 +90,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative z-10 animate-fade-in">
-      
+    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative z-10 animate-fade-in transition-colors duration-300">
+      {/* Floating Theme Switcher */}
+      <div className="fixed top-5 right-6 z-50 flex items-center gap-2">
+        <ThemeToggle />
+      </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         {/* Network Telemetry Status Badges */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] font-bold text-slate-500 mb-4 font-mono">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-4 font-mono">
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>KyroPay Switch: Online</span>
           <span>•</span>
           <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500"></span>NPCI UPI Rails: Active</span>
@@ -105,22 +109,22 @@ export default function Login() {
         <div className="flex justify-center">
           <div className="flex flex-col items-center">
             <KyroLogo size="xl" variant={persona === 'USER' ? 'personal' : persona === 'MERCHANT' ? 'merchant' : 'bank'} animated />
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 border border-blue-200/70 text-blue-700 text-xs font-bold tracking-wider uppercase backdrop-blur-sm shadow-sm">
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/90 dark:bg-blue-950/60 border border-blue-200/70 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold tracking-wider uppercase backdrop-blur-sm shadow-sm">
               <Sparkles size={13} className="text-blue-500 animate-pulse" />
               {persona === 'USER' ? 'Consumer UPI 2.0' : persona === 'MERCHANT' ? 'Merchant Operations' : 'Bank Treasury CBS'}
             </div>
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 tracking-tight">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           {persona === 'USER' ? (
             <>Kyro<span className="text-blue-600">Pay</span></>
           ) : persona === 'MERCHANT' ? (
             <>KyroPay <span className="text-indigo-600">Business</span></>
           ) : (
-            <>KyroBank <span className="text-slate-900">Core CBS</span></>
+            <>KyroBank <span className="text-slate-900 dark:text-slate-200">Core CBS</span></>
           )}
         </h2>
-        <p className="mt-2 text-center text-sm text-slate-500 font-medium">
+        <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400 font-medium">
           {persona === 'USER' 
             ? 'Next-Gen UPI 2.0 & Instant Payments Gateway' 
             : persona === 'MERCHANT' 
@@ -130,13 +134,13 @@ export default function Login() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="bg-white/80 backdrop-blur-xl py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/20">
+        <div className="bg-white/85 dark:bg-slate-900/90 backdrop-blur-xl py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10 border border-white/20 dark:border-slate-800 transition-colors">
           
           <div className="mb-6 text-center">
-            <h3 className="text-lg font-bold text-slate-900">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               {persona === 'USER' ? 'Sign in to KyroPay Personal' : persona === 'MERCHANT' ? 'Sign in to Merchant Hub' : 'Bank Staff & Governance Portal'}
             </h3>
-            <p className="text-slate-500 mt-1.5 text-xs">
+            <p className="text-slate-500 dark:text-slate-400 mt-1.5 text-xs">
               {persona === 'USER' ? 'Access your UPI 2.0 wallet, instant transfers & QR scanner' : persona === 'MERCHANT' ? 'Manage business collections, dynamic QR standees & settlements' : 'Authorized internal bank personnel login with 4-eyes Maker-Checker'}
             </p>
           </div>

@@ -8,6 +8,8 @@ import { AccountStatementModal } from '../components/AccountStatementModal';
 import { RazorpayCheckoutModal } from '../components/RazorpayCheckoutModal';
 import { LinkBankAccountModal } from '../components/LinkBankAccountModal';
 import type { LinkedBankAccount } from '../components/LinkBankAccountModal';
+import { ContactsManager } from '../components/ContactsManager';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -150,23 +152,24 @@ const Topbar = ({ page, setOpen }: any) => {
   const { user, logout } = useAuth();
   const label = navItems.find(n => n.id === page)?.label ?? 'Dashboard';
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 sticky top-0 z-10">
-      <button onClick={() => setOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-800"><Menu size={22} /></button>
-      <h1 className="text-xl font-bold text-slate-800">{label}</h1>
+    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-6 gap-4 sticky top-0 z-10 transition-colors">
+      <button onClick={() => setOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"><Menu size={22} /></button>
+      <h1 className="text-xl font-bold text-slate-800 dark:text-white">{label}</h1>
       <div className="ml-auto flex items-center gap-3">
-        <span className="hidden sm:flex items-center gap-1.5 text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-medium">
+        <ThemeToggle />
+        <span className="hidden sm:flex items-center gap-1.5 text-xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full font-medium border border-emerald-200 dark:border-emerald-800">
           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />CBS Core Live
         </span>
-        <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200">
+        <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
           <div className="text-right">
-            <p className="text-xs font-bold text-slate-800 leading-tight">{user?.fullName || 'Bank Staff'}</p>
-            <p className="text-[10px] text-blue-600 font-semibold">{formatRole(user?.roles?.[0] ?? '')}</p>
+            <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">{user?.fullName || 'Bank Staff'}</p>
+            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">{formatRole(user?.roles?.[0] ?? '')}</p>
           </div>
         </div>
         <button 
           onClick={() => { logout(); window.location.href = '/'; }} 
           title="Sign out of Core Banking CBS"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition border border-red-100 cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-100 dark:border-red-900 cursor-pointer"
         >
           <LogOut size={14} />
           <span className="hidden sm:inline">Sign Out</span>
@@ -1036,7 +1039,7 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   };
 
   return (
-    <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[700px] md:rounded-[40px] shadow-2xl border border-white/40 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10">
+    <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[700px] md:rounded-[40px] shadow-2xl border border-white/40 dark:border-slate-800 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10 transition-colors">
       
       {/* LEFT PANEL: Mobile Header / Desktop Sidebar */}
       <div className="md:w-80 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col relative z-20 shadow-2xl">
@@ -1046,13 +1049,16 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
               <KyroLogo size="sm" variant={title?.includes('Business') ? 'merchant' : 'personal'} />
               <h2 className="font-extrabold text-base md:text-xl tracking-tight">{title}</h2>
             </div>
-            <div className="flex md:hidden items-center gap-3">
-              {clerkUser && <UserButton />}
-              {backendUser && (
-                <button onClick={handleLogout} className="text-white hover:text-blue-200">
-                  <LogOut size={20} />
-                </button>
-              )}
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <div className="flex md:hidden items-center gap-2">
+                {clerkUser && <UserButton />}
+                {backendUser && (
+                  <button onClick={handleLogout} className="text-white hover:text-blue-200">
+                    <LogOut size={20} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-center">
@@ -1099,25 +1105,27 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
                   {clerkUser && <UserButton />}
                   <span className="text-xs text-slate-400 font-bold">Account</span>
                </div>
-               {backendUser && (
-                <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 transition">
-                  <LogOut size={20} />
-                </button>
-               )}
+               <div className="flex items-center gap-2">
+                 {backendUser && (
+                  <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 transition">
+                    <LogOut size={20} />
+                  </button>
+                 )}
+               </div>
              </div>
           </div>
         </div>
       </div>
       
       {/* MAIN CONTENT AREA */}
-      <div className="p-6 pt-6 md:p-10 flex-1 overflow-y-auto no-scrollbar bg-slate-50/50 relative">
+      <div className="p-6 pt-6 md:p-10 flex-1 overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-slate-950/60 relative transition-colors">
         <div className="max-w-2xl mx-auto">
           {children}
         </div>
       </div>
       
       {/* MOBILE BOTTOM NAV WITH CENTER FLOATING QR CODE */}
-      <div className="md:hidden bg-white border-t border-slate-200 px-2 py-2 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20">
+      <div className="md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-2 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20 transition-colors">
         <div className="flex justify-around items-end">
           {/* TAB 1: PAYMENTS */}
           <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('pay')}>
@@ -1265,12 +1273,6 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         setHistory(valid.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       });
   }, [refresh, user, backendUser]);
-
-  const contacts = [
-    { name: 'Self Account', phone: '9876543210', vpa: 'self@okkyro' },
-    { name: 'Aakash Sharma', phone: '9812345678', vpa: 'aakash@okaxis' },
-    { name: 'Priya Verma', phone: '9823456789', vpa: 'priya@okhdfc' }
-  ];
 
   return (
     <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
@@ -1518,15 +1520,18 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         </div>
       )}
       {activeTab === 'contact' && (
-        <div className="space-y-3">
-          <h3 className="font-bold text-slate-800 mb-3">Pay Contacts</h3>
-          {contacts.map((c, i) => (
-            <div key={i} onClick={() => setActiveTab('pay')} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-50">
-              <p className="font-bold text-sm text-slate-800">{c.name}</p>
-              <p className="text-xs text-slate-500">{c.phone}</p>
-            </div>
-          ))}
-        </div>
+        <ContactsManager
+          userPhoneNumber={user?.primaryPhoneNumber?.phoneNumber || (backendUser as any)?.phoneNumber || ''}
+          onSelectContact={(contact) => {
+            setScannedPayee({
+              vpa: contact.vpa,
+              amount: '',
+              payeeName: contact.name,
+              raw: contact.vpa
+            });
+            setActiveTab('pay');
+          }}
+        />
       )}
       {activeTab === 'qr' && (
         <UpiQrStandee
