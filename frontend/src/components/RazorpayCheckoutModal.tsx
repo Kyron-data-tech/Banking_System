@@ -168,7 +168,45 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
       const order = orderRes.data;
       setOrderData(order);
 
-      // Open authentic Razorpay Gateway Overlay
+      // If user configured real Razorpay Developer keys (e.g. rzp_test_xxxx), invoke official Razorpay Checkout SDK popup
+      if (typeof (window as any).Razorpay !== 'undefined' && order?.keyId && !order.keyId.includes('KyroPay') && order.keyId.startsWith('rzp_')) {
+        const rzp = new (window as any).Razorpay({
+          key: order.keyId,
+          amount: order.amountInPaise || amount * 100,
+          currency: order.currency || 'INR',
+          name: 'KyroPay Core Banking',
+          description: purpose === 'PAY_MERCHANT' ? 'Merchant Payment' : 'Add Funds to Kyro Account',
+          order_id: order.orderId,
+          prefill: {
+            email: userEmail,
+            contact: localStorage.getItem('kyro_user_real_phone') || '9876543210',
+          },
+          theme: {
+            color: '#2563eb',
+          },
+          handler: async (response: any) => {
+            try {
+              const verifyRes = await razorpayApi.verifyPayment({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                amount,
+                userEmail,
+                purpose,
+                receiverId,
+              });
+              onPaymentSuccess(verifyRes.data?.transaction);
+              onClose();
+            } catch (vErr: any) {
+              setError(vErr.response?.data?.error || 'Payment verification failed');
+            }
+          },
+        });
+        rzp.open();
+        return;
+      }
+
+      // Fallback: Open authentic built-in Razorpay Gateway Overlay
       setRzpActiveTab('QR');
       setStep('OFFICIAL_RAZORPAY_POPUP');
     } catch (err: any) {
