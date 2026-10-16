@@ -19,7 +19,7 @@ interface UpiQrStandeeProps {
 export const UpiQrStandee: React.FC<UpiQrStandeeProps> = ({
   fullName,
   primaryUpiId,
-  phoneNumber = '7818086344',
+  phoneNumber = '',
   isMerchant = false
 }) => {
   const [selectedIdType, setSelectedIdType] = useState<'primary' | 'phone' | 'custom'>('primary');
@@ -27,8 +27,9 @@ export const UpiQrStandee: React.FC<UpiQrStandeeProps> = ({
   const [presetAmount, setPresetAmount] = useState('');
   const [copied, setCopied] = useState(false);
 
+  const effectivePhone = phoneNumber || localStorage.getItem('kyro_user_real_phone') || localStorage.getItem('kyro_sim_phone') || '';
   // Active UPI ID based on user selection
-  const phoneUpiId = `${phoneNumber.replace(/[^0-9]/g, '')}@kyro`;
+  const phoneUpiId = effectivePhone ? `${effectivePhone.replace(/[^0-9]/g, '')}@okkyro` : primaryUpiId;
   const activeUpiId = 
     selectedIdType === 'primary' 
       ? primaryUpiId 

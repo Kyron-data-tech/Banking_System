@@ -60,6 +60,51 @@ const AppRoutes = () => {
           <Dashboard />
         </ProtectedRoute>
       } />
+      <Route path="/scan" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="scan" />
+        </ProtectedRoute>
+      } />
+      <Route path="/my-qr" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="my-qr" />
+        </ProtectedRoute>
+      } />
+      <Route path="/pay" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="pay" />
+        </ProtectedRoute>
+      } />
+      <Route path="/contacts" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="contact" />
+        </ProtectedRoute>
+      } />
+      <Route path="/history" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="history" />
+        </ProtectedRoute>
+      } />
+      <Route path="/banks" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="banks" />
+        </ProtectedRoute>
+      } />
+      <Route path="/rewards" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="rewards" />
+        </ProtectedRoute>
+      } />
+      <Route path="/soundbox" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="soundbox" />
+        </ProtectedRoute>
+      } />
+      <Route path="/statement" element={
+        <ProtectedRoute>
+          <Dashboard initialTab="statement" />
+        </ProtectedRoute>
+      } />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

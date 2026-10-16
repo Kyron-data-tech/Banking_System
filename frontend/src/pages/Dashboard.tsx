@@ -9,6 +9,10 @@ import { RazorpayCheckoutModal } from '../components/RazorpayCheckoutModal';
 import { LinkBankAccountModal } from '../components/LinkBankAccountModal';
 import type { LinkedBankAccount } from '../components/LinkBankAccountModal';
 import { ContactsManager } from '../components/ContactsManager';
+import { RewardsView } from '../components/RewardsView';
+import { BankAccountsView } from '../components/BankAccountsView';
+import { SoundboxTester } from '../components/SoundboxTester';
+import { playKyroPaySoundbox } from '../utils/soundbox';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
@@ -17,7 +21,8 @@ import {
   LogOut, Banknote, Archive, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
   Menu, X, Plus, QrCode,
-  Receipt, FileSpreadsheet, Building2, ArrowDownToLine
+  Receipt, FileSpreadsheet, Building2, ArrowDownToLine,
+  Gift, Volume2, Smartphone, Send
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { userApi, paymentApi, llmApi, authApi, upiApi } from '../api';
@@ -1029,7 +1034,7 @@ const SmartPayForm = ({
     );
 };
 
-const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab }: any) => {
+const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab, onOpenScanner }: any) => {
   const { logout, user: backendUser } = useAuth();
   const { user: clerkUser } = useUser();
   const isMerchant = Boolean(title?.toLowerCase().includes('business') || title?.toLowerCase().includes('merchant'));
@@ -1039,15 +1044,15 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
   };
 
   return (
-    <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl mx-auto bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[700px] md:rounded-[40px] shadow-2xl border border-white/40 dark:border-slate-800 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10 transition-colors">
+    <div className="w-full max-w-md md:max-w-5xl lg:max-w-6xl mx-auto bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl h-[100dvh] md:h-[90vh] md:min-h-[720px] md:rounded-[40px] shadow-2xl border border-white/40 dark:border-slate-800 mt-0 md:mt-8 overflow-hidden flex flex-col md:flex-row animate-slide-up relative z-10 transition-colors">
       
       {/* LEFT PANEL: Mobile Header / Desktop Sidebar */}
-      <div className="md:w-80 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col relative z-20 shadow-2xl">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white rounded-b-[40px] md:rounded-b-none md:rounded-br-[40px] shadow-lg relative z-10">
-          <div className="flex justify-between md:justify-center items-center mb-4 md:mb-6">
+      <div className="md:w-72 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col relative z-20 shadow-2xl shrink-0">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-white rounded-b-[36px] md:rounded-b-none md:rounded-br-[40px] shadow-lg relative z-10">
+          <div className="flex justify-between md:justify-center items-center mb-3 md:mb-5">
             <div className="flex items-center gap-2">
               <KyroLogo size="sm" variant={title?.includes('Business') ? 'merchant' : 'personal'} />
-              <h2 className="font-extrabold text-base md:text-xl tracking-tight">{title}</h2>
+              <h2 className="font-extrabold text-base md:text-lg tracking-tight">{title}</h2>
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
@@ -1062,53 +1067,86 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 md:w-20 md:h-20 bg-white rounded-full flex items-center justify-center shadow-inner mb-3">
-              <span className="text-blue-600 font-extrabold text-2xl md:text-4xl">
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center shadow-inner mb-2">
+              <span className="text-blue-600 font-extrabold text-2xl md:text-3xl">
                 {(backendUser?.fullName || clerkUser?.fullName || 'K').charAt(0)}
               </span>
             </div>
-            <p className="font-bold text-white md:text-xl">{backendUser?.fullName || clerkUser?.fullName || 'Kyro User'}</p>
-            <div className="mt-2 bg-white/20 rounded-xl p-2 border border-white/30 backdrop-blur-md w-full max-w-[240px]">
-              <p className="text-xs text-blue-100 uppercase font-bold tracking-wider mb-0.5 text-center">Your UPI ID</p>
-              <p className="text-sm font-bold truncate px-2 text-center">{upiId}</p>
+            <p className="font-bold text-white text-sm md:text-base truncate max-w-[200px] text-center">
+              {backendUser?.fullName || clerkUser?.fullName || 'Kyro User'}
+            </p>
+            <div className="mt-2 bg-white/20 rounded-xl p-2 border border-white/30 backdrop-blur-md w-full max-w-[220px]">
+              <p className="text-[10px] text-blue-100 uppercase font-bold tracking-wider mb-0.5 text-center">Your UPI ID</p>
+              <p className="text-xs font-mono font-bold truncate px-1 text-center">{upiId}</p>
             </div>
           </div>
         </div>
         
         {/* DESKTOP NAVIGATION SIDEBAR */}
-        <div className="hidden md:flex flex-col gap-1.5 p-4 flex-1 mt-4 overflow-y-auto no-scrollbar pb-8 scrollbar-hide">
-          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'pay' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
-            <Activity size={24} /> <span className="font-bold text-base">Payments</span>
+        <div className="hidden md:flex flex-col gap-1.5 p-3 flex-1 mt-2 overflow-y-auto no-scrollbar pb-6 scrollbar-hide text-xs">
+          {/* Quick Action: Scan QR (Prominent) */}
+          <button
+            type="button"
+            onClick={() => onOpenScanner ? onOpenScanner() : setActiveTab('scan')}
+            className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg shadow-blue-600/30 hover:scale-[1.02] active:scale-95 text-left font-bold mb-1"
+          >
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <Camera size={18} className="animate-pulse" />
+            </div>
+            <div>
+              <span className="font-extrabold text-sm block">Scan Any QR</span>
+              <span className="text-[10px] text-blue-100 font-normal">Camera & Screenshot</span>
+            </div>
+          </button>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'pay' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('pay')}>
+            <Activity size={18} /> <span className="font-medium text-xs">Payments & Transfer</span>
           </div>
-          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'history' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={24} /> <span className="font-bold text-base">History</span>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'my-qr' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('my-qr')}>
+            <QrCode size={18} /> <span className="font-medium text-xs">{isMerchant ? 'Store Standee QR' : 'My QR Code'}</span>
           </div>
-          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'qr' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('qr')}>
-            <QrCode size={24} /> <span className="font-bold text-base">{isMerchant ? 'Store Standee QR' : 'My QR Code'}</span>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'history' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={18} /> <span className="font-medium text-xs">Payment History</span>
           </div>
-          <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'contact' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
-            <Users size={24} /> <span className="font-bold text-base">Contacts</span>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'contact' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('contact')}>
+            <Users size={18} /> <span className="font-medium text-xs">Verified Contacts</span>
           </div>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'banks' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('banks')}>
+            <Building2 size={18} /> <span className="font-medium text-xs">Bank Accounts & Balance</span>
+          </div>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'rewards' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('rewards')}>
+            <Gift size={18} className="text-amber-300" /> <span className="font-medium text-xs">Rewards & Cashback</span>
+          </div>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'soundbox' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('soundbox')}>
+            <Volume2 size={18} className="text-emerald-300" /> <span className="font-medium text-xs">Smart Soundbox Voice</span>
+          </div>
+
           {isMerchant ? (
-            <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'developer' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
-              <ShieldCheck size={24} /> <span className="font-bold text-base">API Keys</span>
+            <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'developer' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('developer')}>
+              <ShieldCheck size={18} /> <span className="font-medium text-xs">Merchant API Keys</span>
             </div>
           ) : (
-            <div className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-300 ${activeTab === 'statement' ? 'bg-blue-600 shadow-lg scale-105' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('statement')}>
-              <FileSpreadsheet size={24} /> <span className="font-bold text-base">Account Statement</span>
+            <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'statement' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('statement')}>
+              <FileSpreadsheet size={18} /> <span className="font-medium text-xs">Account Statement</span>
             </div>
           )}
           
-          <div className="mt-auto pt-6">
-             <div className="flex items-center justify-between mt-8 p-4 bg-slate-900/50 rounded-2xl border border-slate-700">
-               <div className="flex items-center gap-3">
-                  {clerkUser && <UserButton />}
-                  <span className="text-xs text-slate-400 font-bold">Account</span>
-               </div>
+          <div className="mt-auto pt-4">
+             <div className="flex items-center justify-between p-3 bg-slate-900/60 rounded-2xl border border-slate-700/60">
                <div className="flex items-center gap-2">
+                  {clerkUser && <UserButton />}
+                  <span className="text-[11px] text-slate-400 font-bold">Profile</span>
+               </div>
+               <div className="flex items-center gap-1.5">
                  {backendUser && (
-                  <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 transition">
-                    <LogOut size={20} />
+                  <button onClick={handleLogout} className="text-slate-400 hover:text-red-400 transition p-1">
+                    <LogOut size={16} />
                   </button>
                  )}
                </div>
@@ -1118,70 +1156,63 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       </div>
       
       {/* MAIN CONTENT AREA */}
-      <div className="p-6 pt-6 md:p-10 flex-1 overflow-y-auto no-scrollbar bg-slate-50/50 dark:bg-slate-950/60 relative transition-colors">
+      <div className="p-4 pt-4 md:p-8 flex-1 overflow-y-auto no-scrollbar bg-slate-50/60 dark:bg-slate-950/60 relative transition-colors">
         <div className="max-w-2xl mx-auto">
           {children}
         </div>
       </div>
       
-      {/* MOBILE BOTTOM NAV WITH CENTER FLOATING QR CODE */}
+      {/* MOBILE BOTTOM NAV WITH CENTER FLOATING SCANNER HERO */}
       <div className="md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-2 shrink-0 rounded-t-3xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] relative z-20 transition-colors">
         <div className="flex justify-around items-end">
           {/* TAB 1: PAYMENTS */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('pay')}>
-            <Activity size={22} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className={`text-[10px] font-bold ${activeTab === 'pay' ? 'text-blue-600' : 'text-slate-500'}`}>Payments</span>
+          <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('pay')}>
+            <Activity size={20} className={activeTab === 'pay' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className={`text-[10px] font-bold ${activeTab === 'pay' ? 'text-blue-600' : 'text-slate-500'}`}>Pay</span>
           </div>
 
           {/* TAB 2: HISTORY */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('history')}>
-            <HistoryIcon size={22} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'} />
+          <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('history')}>
+            <HistoryIcon size={20} className={activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'} />
             <span className={`text-[10px] font-bold ${activeTab === 'history' ? 'text-blue-600' : 'text-slate-500'}`}>History</span>
           </div>
 
-          {/* TAB 3 (CENTER HERO): QR CODE */}
+          {/* TAB 3 (CENTER HERO): SCAN ANY QR CODE */}
           <div 
-            onClick={() => setActiveTab('qr')} 
+            onClick={() => onOpenScanner ? onOpenScanner() : setActiveTab('scan')} 
             className="relative -top-4 flex flex-col items-center group cursor-pointer"
           >
-            <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 transform group-hover:scale-110 active:scale-95 border-4 border-white ${
-              activeTab === 'qr'
-                ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white ring-4 ring-blue-200 shadow-blue-500/50'
-                : 'bg-gradient-to-tr from-slate-900 via-indigo-950 to-blue-900 text-white shadow-indigo-950/40'
-            }`}>
-              <QrCode size={26} className={activeTab === 'qr' ? 'animate-pulse' : ''} />
+            <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 transform group-hover:scale-110 active:scale-95 border-4 border-white dark:border-slate-800 bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-blue-500/50">
+              <Camera size={26} className="text-white animate-pulse" />
             </div>
-            <span className={`text-[10px] font-black mt-0.5 ${activeTab === 'qr' ? 'text-blue-600' : 'text-slate-700'}`}>
-              QR Code
+            <span className="text-[10px] font-black mt-0.5 text-blue-600 dark:text-blue-400">
+              Scan QR
             </span>
           </div>
 
-          {/* TAB 4: CONTACTS */}
-          <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('contact')}>
-            <Users size={22} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className={`text-[10px] font-bold ${activeTab === 'contact' ? 'text-blue-600' : 'text-slate-500'}`}>Contacts</span>
+          {/* TAB 4: MY QR CODE */}
+          <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('my-qr')}>
+            <QrCode size={20} className={activeTab === 'my-qr' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className={`text-[10px] font-bold ${activeTab === 'my-qr' ? 'text-blue-600' : 'text-slate-500'}`}>My QR</span>
           </div>
 
-          {/* TAB 5: API KEYS (MERCHANT) OR STATEMENT (PERSONAL) */}
-          {isMerchant ? (
-            <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('developer')}>
-              <ShieldCheck size={22} className={activeTab === 'developer' ? 'text-blue-600' : 'text-slate-400'} />
-              <span className={`text-[10px] font-bold ${activeTab === 'developer' ? 'text-blue-600' : 'text-slate-500'}`}>API Keys</span>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('statement')}>
-              <FileSpreadsheet size={22} className={activeTab === 'statement' ? 'text-blue-600' : 'text-slate-400'} />
-              <span className={`text-[10px] font-bold ${activeTab === 'statement' ? 'text-blue-600' : 'text-slate-500'}`}>Statement</span>
-            </div>
-          )}
+          {/* TAB 5: CONTACTS */}
+          <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('contact')}>
+            <Users size={20} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
+            <span className={`text-[10px] font-bold ${activeTab === 'contact' ? 'text-blue-600' : 'text-slate-500'}`}>Contacts</span>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
-    const [showScanner, setShowScanner] = useState(false);
+const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string | null; initialTab?: string }) => {
+    const [activeTab, setActiveTab] = useState<string>(() => {
+      if (initialTab && initialTab !== 'scan') return initialTab;
+      return 'pay';
+    });
+    const [showScanner, setShowScanner] = useState<boolean>(() => initialTab === 'scan');
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [balanceVisible, setBalanceVisible] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
@@ -1214,7 +1245,6 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
 
   const { user } = useUser();
   const { user: backendUser } = useAuth();
-  const [activeTab, setActiveTab] = useState('pay');
   const [history, setHistory] = useState<any[]>([]);
   const [refresh, setRefresh] = useState(0);
 
@@ -1275,11 +1305,17 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   }, [refresh, user, backendUser]);
 
   return (
-    <MobileDashboardLayout title="KyroPay Personal" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <MobileDashboardLayout 
+      title="KyroPay Personal" 
+      upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'normal@kyro'} 
+      activeTab={activeTab} 
+      setActiveTab={setActiveTab}
+      onOpenScanner={() => setShowScanner(true)}
+    >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl mb-6 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl mb-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-400/20 rounded-full blur-xl transform -translate-x-5 translate-y-5" />
             <div className="relative z-10 flex justify-between items-center">
@@ -1320,6 +1356,114 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                 className="bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 backdrop-blur-md border border-white/20 shadow-sm transition"
               >
                 <Plus size={14} className="text-emerald-300" /> Add Money (Bank)
+              </button>
+            </div>
+          </div>
+
+          {/* REAL UPI QUICK ACTIONS GRID (PhonePe / Google Pay Style) */}
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-200/80 dark:border-slate-700 shadow-sm transition-colors">
+            <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3.5 flex items-center gap-1.5">
+              <Send size={12} className="text-blue-600" /> Transfer Money
+            </h4>
+            <div className="grid grid-cols-4 gap-2 text-center">
+              {/* 1. Scan Any QR */}
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition">
+                  <Camera size={22} className="animate-pulse" />
+                </div>
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">
+                  Scan QR
+                </span>
+              </button>
+
+              {/* 2. To Mobile / Contacts */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('contact')}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-slate-600 group-hover:scale-105 transition">
+                  <Smartphone size={22} />
+                </div>
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">
+                  To Mobile
+                </span>
+              </button>
+
+              {/* 3. To Bank A/C */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRazorpayPurpose('ADD_FUNDS');
+                  setRazorpayAmount(1000);
+                  setShowRazorpayModal(true);
+                }}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-slate-600 group-hover:scale-105 transition">
+                  <Building2 size={22} />
+                </div>
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">
+                  To Bank
+                </span>
+              </button>
+
+              {/* 4. My QR Code */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('my-qr')}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-slate-700 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100 dark:border-slate-600 group-hover:scale-105 transition">
+                  <QrCode size={22} />
+                </div>
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">
+                  My QR
+                </span>
+              </button>
+            </div>
+
+            {/* Quick Services Row */}
+            <div className="grid grid-cols-4 gap-2 text-center mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setActiveTab('banks')}
+                className="flex flex-col items-center gap-1 p-1 hover:text-blue-600 transition cursor-pointer"
+              >
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  💳 Balance
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('rewards')}
+                className="flex flex-col items-center gap-1 p-1 hover:text-amber-500 transition cursor-pointer"
+              >
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  🎁 Rewards
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('soundbox')}
+                className="flex flex-col items-center gap-1 p-1 hover:text-emerald-500 transition cursor-pointer"
+              >
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  🔊 Soundbox
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStatementModal(true)}
+                className="flex flex-col items-center gap-1 p-1 hover:text-indigo-500 transition cursor-pointer"
+              >
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  📄 Statement
+                </span>
               </button>
             </div>
           </div>
@@ -1481,6 +1625,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
                 setScannedPayee(null);
                 if (createdTx) {
                   setActiveReceipt(createdTx);
+                  playKyroPaySoundbox(createdTx.totalAmount, 'hi');
                 }
               }} 
               onPayViaRazorpay={(amt, targetVpa, targetName) => {
@@ -1498,12 +1643,12 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-extrabold text-slate-800 text-lg">Payment History</h3>
+              <h3 className="font-extrabold text-slate-800 dark:text-white text-lg">Payment History</h3>
               <p className="text-xs text-slate-500">Track all incoming & outgoing transfers</p>
             </div>
             <button
               onClick={() => setShowStatementModal(true)}
-              className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
+              className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95"
             >
               <FileSpreadsheet size={15} className="text-emerald-600" />
               Download Statement
@@ -1521,7 +1666,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
       )}
       {activeTab === 'contact' && (
         <ContactsManager
-          userPhoneNumber={user?.primaryPhoneNumber?.phoneNumber || (backendUser as any)?.phoneNumber || ''}
+          userPhoneNumber={user?.primaryPhoneNumber?.phoneNumber || (backendUser as any)?.phoneNumber || localStorage.getItem('kyro_user_real_phone') || ''}
           onSelectContact={(contact) => {
             setScannedPayee({
               vpa: contact.vpa,
@@ -1533,21 +1678,42 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
           }}
         />
       )}
-      {activeTab === 'qr' && (
+      {(activeTab === 'my-qr' || activeTab === 'qr') && (
         <UpiQrStandee
           fullName={user?.fullName || backendUser?.fullName || 'Kyro User'}
           primaryUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'user').split('@')[0] + '@okkyro'}
-          phoneNumber={user?.primaryPhoneNumber?.phoneNumber || '7818086344'}
+          phoneNumber={user?.primaryPhoneNumber?.phoneNumber || localStorage.getItem('kyro_user_real_phone') || ''}
           isMerchant={false}
         />
       )}
+      {activeTab === 'banks' && (
+        <BankAccountsView
+          linkedBanks={linkedBanks}
+          onOpenLinkBankModal={() => setShowLinkBankModal(true)}
+          onSetPrimaryBank={(bankId) => {
+            setLinkedBanks(prev => prev.map(b => ({ ...b, isPrimary: b.id === bankId })));
+          }}
+          availableBalance={currentBalance}
+        />
+      )}
+      {activeTab === 'rewards' && (
+        <RewardsView
+          onDepositCashback={(amount) => {
+            setRefresh(r => r + 1);
+            playKyroPaySoundbox(amount, 'hi');
+          }}
+        />
+      )}
+      {activeTab === 'soundbox' && (
+        <SoundboxTester defaultAmount={100} />
+      )}
       {activeTab === 'statement' && (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl text-center space-y-4 animate-fade-in">
-          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 border border-emerald-100">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl text-center space-y-4 animate-fade-in">
+          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 border border-emerald-100 dark:border-emerald-800">
             <FileSpreadsheet size={32} />
           </div>
           <div>
-            <h3 className="font-extrabold text-slate-800 text-lg">Official Account Statement</h3>
+            <h3 className="font-extrabold text-slate-800 dark:text-white text-lg">Official Account Statement</h3>
             <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Generate and download your stamped KyroPay transaction passbook & monthly statements.</p>
           </div>
           <button 
@@ -1562,6 +1728,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
       <QrScannerModal
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
+        onShowMyQr={() => setActiveTab('my-qr')}
         onScanSuccess={(payload) => {
           setScannedPayee(payload);
           setActiveTab('pay');
@@ -1601,6 +1768,7 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
           setRefresh(r => r + 1);
           if (createdTx) {
             setActiveReceipt(createdTx);
+            playKyroPaySoundbox(createdTx.totalAmount, 'hi');
           }
         }}
       />
@@ -1614,8 +1782,12 @@ const PhonePeDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) =
   );
 };
 
-const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) => {
-    const [showScanner, setShowScanner] = useState(false);
+const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string | null; initialTab?: string }) => {
+    const [activeTab, setActiveTab] = useState<string>(() => {
+      if (initialTab && initialTab !== 'scan') return initialTab;
+      return 'pay';
+    });
+    const [showScanner, setShowScanner] = useState<boolean>(() => initialTab === 'scan');
     const [scannedPayee, setScannedPayee] = useState<ScannedUpiPayload | null>(null);
     const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
     const [showSettlementModal, setShowSettlementModal] = useState<boolean>(false);
@@ -1628,7 +1800,6 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
 
     const { user } = useUser();
     const { user: backendUser } = useAuth();
-    const [activeTab, setActiveTab] = useState('pay');
     
     const [balanceVisible, setBalanceVisible] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
@@ -1701,7 +1872,13 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
 
   return (
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
-      <MobileDashboardLayout title="KyroPay Business Hub" upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} activeTab={activeTab} setActiveTab={setActiveTab}>
+      <MobileDashboardLayout 
+        title="KyroPay Business Hub" 
+        upiId={verifiedUpiId || user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        onOpenScanner={() => setShowScanner(true)}
+      >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
@@ -2015,17 +2192,21 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
             </button>
           </div>
         )}
-        {activeTab === 'qr' && (
+        {(activeTab === 'my-qr' || activeTab === 'qr') && (
         <UpiQrStandee
           fullName={user?.fullName || backendUser?.fullName || 'Merchant Business Store'}
           primaryUpiId={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant').split('@')[0] + '@okkyro'}
-          phoneNumber={user?.primaryPhoneNumber?.phoneNumber || '7818086344'}
+          phoneNumber={user?.primaryPhoneNumber?.phoneNumber || localStorage.getItem('kyro_user_real_phone') || ''}
           isMerchant={true}
         />
+      )}
+      {activeTab === 'soundbox' && (
+        <SoundboxTester defaultAmount={500} />
       )}
       <QrScannerModal
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
+        onShowMyQr={() => setActiveTab('my-qr')}
         onScanSuccess={(payload) => {
           setScannedPayee(payload);
           setActiveTab('pay');
@@ -2085,7 +2266,7 @@ const MerchantDashboard = ({ verifiedUpiId }: { verifiedUpiId: string | null }) 
   );
 };
 
-const Dashboard = () => {
+const Dashboard = ({ initialTab }: { initialTab?: string }) => {
   const { signOut } = useClerk();
   const { logout } = useAuth();
   
@@ -2172,9 +2353,9 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 
   let DashboardContent = null;
   if (isMerchant) {
-    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} />;
+    DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} initialTab={initialTab} />;
   } else if (!isBankEmployee) {
-    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} />;
+    DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} initialTab={initialTab} />;
   } else {
     DashboardContent = (
       <div className="flex h-screen bg-white/50 backdrop-blur-3xl overflow-hidden font-sans relative z-10">

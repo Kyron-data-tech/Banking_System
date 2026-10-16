@@ -159,7 +159,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
     return 'ENTER_PHONE';
   });
 
-  const [inputPhone, setInputPhone] = useState(boundPhoneNumber || '7818086344');
+  const [inputPhone, setInputPhone] = useState(boundPhoneNumber || '');
   const [selectedSim, setSelectedSim] = useState<'SIM1' | 'SIM2'>('SIM1');
   const [generatedOtp, setGeneratedOtp] = useState<string>('');
   const [enteredOtp, setEnteredOtp] = useState<string>('');
@@ -388,56 +388,14 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
           source: 'NPCI_DIRECTORY' as const
         }));
 
-        // If backend returned empty or local dev mock, ensure realistic real network beneficiaries
-        const baseBeneficiaries: SyncedContact[] = networkContacts.length > 0 ? networkContacts : [
-          {
-            id: 'c1',
-            name: 'Rahul Sharma',
-            phoneNumber: '9820112233',
-            upiId: 'rahul.sharma@okhdfcbank',
-            avatarColor: AVATAR_COLORS[0],
-            isUpiRegistered: true,
-            bankBadge: 'HDFC Bank',
-            source: 'NPCI_DIRECTORY'
-          },
-          {
-            id: 'c2',
-            name: 'Priya Verma',
-            phoneNumber: '9819223344',
-            upiId: 'priyaverma@okaxis',
-            avatarColor: AVATAR_COLORS[1],
-            isUpiRegistered: true,
-            bankBadge: 'Axis Bank',
-            source: 'NPCI_DIRECTORY'
-          },
-          {
-            id: 'c3',
-            name: 'Vikram Malhotra',
-            phoneNumber: '9769334455',
-            upiId: 'vikram.m@oksbi',
-            avatarColor: AVATAR_COLORS[2],
-            isUpiRegistered: true,
-            bankBadge: 'State Bank of India',
-            source: 'NPCI_DIRECTORY'
-          },
-          {
-            id: 'c4',
-            name: 'Amit Patel',
-            phoneNumber: '9821556677',
-            upiId: 'amit.patel@okkyro',
-            avatarColor: AVATAR_COLORS[3],
-            isUpiRegistered: true,
-            bankBadge: 'KyroPay UPI',
-            source: 'NPCI_DIRECTORY'
-          }
-        ];
-
-        const merged = mergeContacts(contacts, baseBeneficiaries);
+        const merged = mergeContacts(contacts, networkContacts);
         setContacts(merged);
         localStorage.setItem('kyro_contacts_synced', 'true');
         setIsSyncing(false);
         setSimStep('SYNCED');
-        setImportNotification(`Synchronized ${baseBeneficiaries.length} banking network contacts.`);
+        setImportNotification(networkContacts.length > 0 
+          ? `Synchronized ${networkContacts.length} verified banking network contacts.`
+          : 'No contacts found on banking network. Import your device .vcf file or add contacts directly.');
         setTimeout(() => setImportNotification(null), 5000);
       }, 1400);
 
@@ -604,7 +562,7 @@ export const ContactsManager: React.FC<ContactsManagerProps> = ({
                   maxLength={10}
                   value={inputPhone}
                   onChange={(e) => setInputPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="e.g. 7818086344"
+                  placeholder="Enter 10-digit mobile number"
                   className="w-full pl-20 pr-4 py-3 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                   required
                 />

@@ -26,6 +26,7 @@ interface QrScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScanSuccess: (payload: ScannedUpiPayload) => void;
+  onShowMyQr?: () => void;
 }
 
 export function parseUpiQrString(raw: string): ScannedUpiPayload | null {
@@ -109,7 +110,8 @@ export function parseUpiQrString(raw: string): ScannedUpiPayload | null {
 export const QrScannerModal: React.FC<QrScannerModalProps> = ({
   isOpen,
   onClose,
-  onScanSuccess
+  onScanSuccess,
+  onShowMyQr
 }) => {
   const [activeTab, setActiveTab] = useState<'camera' | 'upload' | 'demo'>('camera');
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -236,16 +238,42 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = () => {
-        // Multi-resolution canvas scanner helper
-        const tryScanAtDimensions = (targetW: number, targetH: number): string | null => {
+      img.onload = async () => {
+        // Fast path: Native hardware-accelerated BarcodeDetector (Chrome / Android / Chromium)
+        if ('BarcodeDetector' in window) {
+          try {
+            const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+            const barcodes = await detector.detect(img);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              const parsed = parseUpiQrString(barcodes[0].rawValue);
+              if (parsed) {
+                setIsProcessingImage(false);
+                handleDetected(parsed);
+                return;
+              }
+            }
+          } catch (e) {
+            // fallback to multi-scale canvas scanning
+          }
+        }
+
+        // Multi-resolution & center-crop canvas scanner helper
+        const tryScanAtDimensions = (targetW: number, targetH: number, centerCropRatio = 1): string | null => {
           try {
             const canvas = document.createElement('canvas');
             canvas.width = targetW;
             canvas.height = targetH;
             const ctx = canvas.getContext('2d', { willReadFrequently: true });
             if (!ctx) return null;
-            ctx.drawImage(img, 0, 0, targetW, targetH);
+            if (centerCropRatio < 1) {
+              const srcW = img.width * centerCropRatio;
+              const srcH = img.height * centerCropRatio;
+              const srcX = (img.width - srcW) / 2;
+              const srcY = (img.height - srcH) / 2;
+              ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH);
+            } else {
+              ctx.drawImage(img, 0, 0, targetW, targetH);
+            }
             const imgData = ctx.getImageData(0, 0, targetW, targetH);
             const res = jsQR(imgData.data, imgData.width, imgData.height, {
               inversionAttempts: 'attemptBoth',
@@ -267,13 +295,25 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
           detectedRaw = tryScanAtDimensions(img.width, img.height);
         }
 
-        // Pass 2: 720px width (ideal for standard mobile screenshots)
+        // Pass 2: Center crop 75% at 720px (standard phone screenshot with status/nav bars)
+        if (!detectedRaw) {
+          const s = 720 / Math.max(img.width, 1);
+          detectedRaw = tryScanAtDimensions(720, Math.round(img.height * s), 0.75);
+        }
+
+        // Pass 3: 720px width full scale
         if (!detectedRaw && img.width !== 720) {
           const s = 720 / img.width;
           detectedRaw = tryScanAtDimensions(720, Math.round(img.height * s));
         }
 
-        // Pass 3: 480px width (for compact/embedded QRs)
+        // Pass 4: 480px width center crop 60%
+        if (!detectedRaw) {
+          const s = 480 / Math.max(img.width, 1);
+          detectedRaw = tryScanAtDimensions(480, Math.round(img.height * s), 0.60);
+        }
+
+        // Pass 5: 480px width full scale
         if (!detectedRaw && img.width !== 480) {
           const s = 480 / img.width;
           detectedRaw = tryScanAtDimensions(480, Math.round(img.height * s));
@@ -552,6 +592,23 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
           )}
 
         </div>
+
+        {/* Bottom Switch to My QR Standee */}
+        {onShowMyQr && (
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+            <span className="text-xs text-slate-500 font-medium">Want to receive payments instead?</span>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onShowMyQr();
+              }}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl transition cursor-pointer"
+            >
+              <QrCode size={14} /> Show My QR Code ➔
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
