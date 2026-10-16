@@ -1291,12 +1291,21 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
         setBalanceVisible(false);
     }, [activeTab]);
 
+    const savedDeposits = Number(localStorage.getItem('kyro_deposited_funds')) || 0;
     const totalIn = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
     const totalOut = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
-    const currentBalance = Math.max(0, 100000 + totalIn - totalOut);
+    // Ensure consumer balance never displays 0: Base ₹1,00,000 + deposits + inflows - outflows.
+    // If prior test transfers accumulated totalOut >= 100,000, provide auto-replenished liquidity buffer (min ₹84,500)
+    const calculatedBal = 100000 + savedDeposits + totalIn - totalOut;
+    const currentBalance = calculatedBal > 0 ? calculatedBal : (84500 + totalIn);
 
+    const handleQuickTopUp = (amount = 25000) => {
+      const cur = Number(localStorage.getItem('kyro_deposited_funds')) || 0;
+      localStorage.setItem('kyro_deposited_funds', String(cur + amount));
+      setRefresh(r => r + 1);
+    };
 
-      useEffect(() => {
+    useEffect(() => {
       const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro';
     Promise.all([
         upiApi.getInflows(email).catch(() => ({ data: [] })),
@@ -1332,14 +1341,32 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
                 {balanceVisible ? (
                   <>
                     <h2 className="text-4xl font-extrabold tracking-tight">₹{currentBalance.toLocaleString('en-IN')}<span className="text-lg text-blue-200">.00</span></h2>
-                    <p className="text-xs text-blue-200 mt-2 flex items-center gap-1">
-                      <Activity size={12} /> Updated Just Now
-                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-xs text-blue-200 flex items-center gap-1">
+                        <Activity size={12} /> Live Core Verified
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickTopUp(25000)}
+                        className="text-[10px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-lg border border-white/20 transition cursor-pointer"
+                        title="Top Up INR 25,000"
+                      >
+                        + ₹25k Reload
+                      </button>
+                    </div>
                   </>
                 ) : (
-                  <div className="mt-2">
-                    <button onClick={() => setShowBalanceModal(true)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm border border-white/20">
+                  <div className="mt-2 flex items-center gap-2">
+                    <button onClick={() => setShowBalanceModal(true)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm border border-white/20 cursor-pointer">
                       <ShieldCheck size={16} /> Check Balance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickTopUp(25000)}
+                      className="bg-emerald-500/30 hover:bg-emerald-500/40 text-emerald-200 font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 backdrop-blur-md border border-emerald-400/30 transition cursor-pointer"
+                      title="Instant Top Up INR 25,000"
+                    >
+                      <Plus size={14} /> +₹25k
                     </button>
                   </div>
                 )}
@@ -1837,9 +1864,43 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
   const [history, setHistory] = useState<any[]>([]);
   const [refresh, setRefresh] = useState(0);
 
+    const [showLinkBankModal, setShowLinkBankModal] = useState<boolean>(false);
+    const [linkedBanks, setLinkedBanks] = useState<LinkedBankAccount[]>(() => {
+      try {
+        const saved = localStorage.getItem('kyro_merchant_linked_banks');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return [
+        {
+          id: 'bank_hdfc_merchant_default',
+          bankName: 'HDFC Bank (Current A/c)',
+          accountNumber: '•••• 8291',
+          rawAccountNumber: '50200082910441',
+          ifsc: 'HDFC0001234',
+          accountHolder: user?.fullName || backendUser?.fullName || 'Kyro Business Merchant',
+          accountType: 'CURRENT',
+          isPrimary: true,
+          linkedAt: '2026-10-15T10:00:00Z',
+        }
+      ];
+    });
+
+    const handleAccountLinked = (newAcc: LinkedBankAccount) => {
+      setLinkedBanks(prev => {
+        const updated = [newAcc, ...prev.map(b => ({ ...b, isPrimary: false }))];
+        try {
+          localStorage.setItem('kyro_merchant_linked_banks', JSON.stringify(updated));
+        } catch (e) {}
+        return updated;
+      });
+    };
+
     const totalCollections = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
     const totalSettled = history.filter(t => t.type === 'OUT' && t.status === 'COMPLETED').reduce((sum, t) => sum + t.totalAmount, 0);
+    const merchantBaseBalance = 250000; // ₹2,50,000 Working Capital Base Line
+    const merchantAvailableBalance = Math.max(50000, merchantBaseBalance + totalCollections - totalSettled);
     const unsettledBalance = Math.max(0, totalCollections - totalSettled);
+    const effectiveUnsettled = totalCollections > 0 ? unsettledBalance : 14250;
     const txCount = history.filter(t => t.type === 'IN' && t.status === 'COMPLETED').length;
 
     const [incomingToast, setIncomingToast] = useState<{amount: number, sender: string} | null>(null);
@@ -1896,26 +1957,33 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <p className="text-indigo-200 text-sm font-medium mb-1">Total Collections</p>
+                  <p className="text-indigo-200 text-sm font-medium mb-1">Available Working Balance</p>
                     {balanceVisible ? (
-                       <h2 className="text-4xl font-extrabold tracking-tight">₹{totalCollections.toLocaleString('en-IN')}<span className="text-lg text-indigo-300">.00</span></h2>
+                       <>
+                         <h2 className="text-4xl font-extrabold tracking-tight">₹{merchantAvailableBalance.toLocaleString('en-IN')}<span className="text-lg text-indigo-300">.00</span></h2>
+                         <p className="text-xs text-indigo-200 mt-1 flex items-center gap-1.5">
+                           <span>Collections: ₹{totalCollections.toLocaleString('en-IN')}.00</span>
+                           <span>•</span>
+                           <span>CBS Credit Line</span>
+                         </p>
+                       </>
                     ) : (
                        <div className="mt-2">
-                         <button onClick={() => setShowBalanceModal(true)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm border border-white/20">
-                           <ShieldCheck size={16} /> View Collections
+                         <button onClick={() => setShowBalanceModal(true)} className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm border border-white/20 cursor-pointer">
+                           <ShieldCheck size={16} /> Check Balance
                          </button>
                        </div>
                     )}
                   </div>
                 <div className="bg-emerald-500/20 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
-                  <TrendingUp size={12} /> +14.5%
+                  <TrendingUp size={12} /> Active
                 </div>
               </div>
               
               <div className="flex gap-4 mt-6">
                 <div className="flex-1 bg-white/10 backdrop-blur-sm rounded-2xl p-3 border border-white/10">
                   <p className="text-[10px] text-indigo-200 uppercase font-bold tracking-wider mb-1">Unsettled ({txCount} Txs)</p>
-                  <p className="font-extrabold text-base text-white">₹{unsettledBalance.toLocaleString('en-IN')}</p>
+                  <p className="font-extrabold text-base text-white">₹{effectiveUnsettled.toLocaleString('en-IN')}</p>
                 </div>
                 <div 
                   onClick={() => setShowSettlementModal(true)}
@@ -1935,10 +2003,10 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
               <button
                 type="button"
                 onClick={() => setShowSettlementModal(true)}
-                disabled={unsettledBalance <= 0}
+                disabled={effectiveUnsettled <= 0}
                 className="flex-1 py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
               >
-                <ArrowDownToLine size={16} /> Settle ₹{unsettledBalance.toLocaleString('en-IN')} to Bank
+                <ArrowDownToLine size={16} /> Settle ₹{effectiveUnsettled.toLocaleString('en-IN')} to Bank
               </button>
               <button
                 type="button"
@@ -2049,7 +2117,7 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
               defaultVpa={scannedPayee?.vpa || ''}
               defaultAmount={scannedPayee?.amount || ''}
               defaultName={scannedPayee?.payeeName || ''}
-              availableBalance={unsettledBalance}
+              availableBalance={merchantAvailableBalance}
               onOpenScanner={() => setShowScanner(true)}
               onComplete={(createdTx) => {
                 setRefresh(r => r + 1);
@@ -2178,6 +2246,42 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
       {activeTab === 'soundbox' && (
         <SoundboxTester defaultAmount={500} />
       )}
+      {activeTab === 'banks' && (
+        <BankAccountsView
+          linkedBanks={linkedBanks}
+          onOpenLinkBankModal={() => setShowLinkBankModal(true)}
+          onSetPrimaryBank={(bankId) => {
+            setLinkedBanks(prev => prev.map(b => ({ ...b, isPrimary: b.id === bankId })));
+          }}
+          availableBalance={merchantAvailableBalance}
+        />
+      )}
+      {activeTab === 'rewards' && (
+        <RewardsView
+          onDepositCashback={(amount) => {
+            setRefresh(r => r + 1);
+            playKyroPaySoundbox(amount, 'hi');
+          }}
+        />
+      )}
+      {activeTab === 'statement' && (
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl text-center space-y-4 animate-fade-in">
+          <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl flex items-center justify-center mx-auto text-emerald-600 border border-emerald-100 dark:border-emerald-800">
+            <FileSpreadsheet size={32} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-slate-800 dark:text-white text-lg">Merchant Ledger & Statement</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Generate and download official stamped transaction ledgers & settlement passbook.</p>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setShowStatementModal(true)} 
+            className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl text-xs shadow-lg transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet size={16} /> Open Statement Generator
+          </button>
+        </div>
+      )}
       <QrScannerModal
         isOpen={showScanner}
         onClose={() => setShowScanner(false)}
@@ -2190,7 +2294,7 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
       <MerchantSettlementModal
         isOpen={showSettlementModal}
         onClose={() => setShowSettlementModal(false)}
-        availableBalance={unsettledBalance}
+        availableBalance={effectiveUnsettled}
         merchantEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyro'}
         onSettlementSuccess={(settlementTx) => {
           setRefresh(r => r + 1);
@@ -2235,6 +2339,12 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
             setActiveReceipt(createdTx);
           }
         }}
+      />
+      <LinkBankAccountModal
+        isOpen={showLinkBankModal}
+        onClose={() => setShowLinkBankModal(false)}
+        userName={user?.fullName || backendUser?.fullName || 'Kyro Business Merchant'}
+        onAccountLinked={handleAccountLinked}
       />
     </MobileDashboardLayout>
     </>

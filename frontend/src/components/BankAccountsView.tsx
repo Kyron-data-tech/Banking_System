@@ -31,9 +31,11 @@ export const BankAccountsView: React.FC<BankAccountsViewProps> = ({
     setTimeout(() => {
       setIsVerifying(false);
       if (selectedBankForMpin) {
-        // Compute realistic balance for the selected account
-        const balance = selectedBankForMpin.isPrimary ? availableBalance : Math.floor(Math.random() * 45000) + 12500;
-        setVerifiedBalances(prev => ({ ...prev, [selectedBankForMpin.id]: balance }));
+        // Compute realistic balance for the selected account (ensure CBS primary balance never drops to 0)
+        const defaultPrimaryBalance = selectedBankForMpin.bankName.includes('HDFC') ? 84500 : 62500;
+        const balance = (availableBalance && availableBalance > 0) ? availableBalance : defaultPrimaryBalance;
+        const finalBalance = selectedBankForMpin.isPrimary ? balance : Math.floor(Math.random() * 45000) + 32500;
+        setVerifiedBalances(prev => ({ ...prev, [selectedBankForMpin.id]: finalBalance }));
         setSelectedBankForMpin(null);
         setMpin('');
       }
