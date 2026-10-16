@@ -17,7 +17,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
-  Camera, Search, ArrowDownLeft, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
+  Camera, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
   LogOut, Banknote, Archive, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
   Menu, X, Plus, QrCode,
@@ -849,23 +849,31 @@ const SmartPayForm = ({
       <div className="relative">
         {localToast && <Toast message={localToast.msg} type={localToast.type} onClose={() => setLocalToast(null)} />}
         
-        {/* Scanned QR Payee Notification Banner */}
+        {/* Scanned QR or Contact Payee Notification Banner */}
         {defaultVpa && (
           <div className="mb-4 p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md">
-                <QrCode size={20} />
+                {defaultAmount ? <QrCode size={20} /> : <Users size={20} />}
               </div>
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wide text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">QR Payee Fetched</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-wide text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                  {defaultAmount ? 'QR Payee Fetched' : 'Verified Contact Payee'}
+                </span>
                 <p className="text-sm font-black text-slate-900 mt-0.5">{verifiedName || vpa}</p>
                 <p className="text-xs font-mono text-slate-500">{vpa}</p>
               </div>
             </div>
-            {amount && (
+            {amount ? (
               <div className="text-right">
                 <span className="text-[10px] font-bold text-slate-400 uppercase">QR Amount</span>
                 <p className="text-base font-black text-slate-900">₹{amount}</p>
+              </div>
+            ) : (
+              <div className="text-right">
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase border border-emerald-200">
+                  1-Tap Pay
+                </span>
               </div>
             )}
           </div>
@@ -912,7 +920,7 @@ const SmartPayForm = ({
               </div>
             </div>
             <div className="flex gap-2">
-                <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="name@okkyro or 9876543210@ybl" 
+                <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="name@okkyro or mobile@upi" 
   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium" />
                 {onOpenScanner && (
                   <button type="button" onClick={onOpenScanner} title="Scan QR Code" className="px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition border border-blue-200 flex items-center justify-center">
@@ -2101,51 +2109,18 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         </div>
       )}
       {activeTab === 'contact' && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-slate-800 text-lg">Customer Directory</h3>
-            <button className="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 hover:bg-blue-200 transition" onClick={() => setActiveTab('pay')}>
-              <Users size={16} /> Sync
-            </button>
-          </div>
-          
-          <div className="bg-white p-2 flex items-center gap-2 rounded-xl border border-slate-200 shadow-sm focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition">
-            <Search size={18} className="text-slate-400 ml-2" />
-            <input type="text" placeholder="Search by name or UPI ID..." className="flex-1 p-2 outline-none text-sm" />
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Recent Customers</p>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {Array.from(new Set(history.map(tx => tx.type === 'IN' ? tx.senderId : tx.receiverId))).filter(Boolean).map((id, i) => (
-                <div key={i} className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer" onClick={() => setActiveTab('history')}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-lg">
-                      {String(id).charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800 text-sm truncate max-w-[180px]">{String(id)}</p>
-                      <p className="text-xs text-slate-500">Customer</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                     <button className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition" title="Request Payment" onClick={(e) => {e.stopPropagation(); setActiveTab('pay')}}>
-                       <ArrowDownLeft size={16} />
-                     </button>
-                  </div>
-                </div>
-              ))}
-              {history.length === 0 && (
-                <div className="p-8 text-center text-slate-500">
-                  <Users size={32} className="mx-auto mb-2 text-slate-300" />
-                  <p className="text-sm font-medium">No customers yet</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <ContactsManager
+          userPhoneNumber={user?.primaryPhoneNumber?.phoneNumber || (backendUser as any)?.phoneNumber || localStorage.getItem('kyro_user_real_phone') || ''}
+          onSelectContact={(contact) => {
+            setScannedPayee({
+              vpa: contact.vpa,
+              amount: '',
+              payeeName: contact.name,
+              raw: contact.vpa
+            });
+            setActiveTab('pay');
+          }}
+        />
       )}
       {activeTab === 'developer' && (
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl animate-fade-in text-left">
