@@ -149,7 +149,7 @@ public class RazorpayService {
             String receiver = request.getReceiverId() != null ? request.getReceiverId() : "merchant@kyro";
             parentTx = UpiParentTransaction.builder()
                 .parentReferenceNo(request.getRazorpayOrderId())
-                .senderId(request.getUserEmail() + " (via Real Bank)")
+                .senderId(request.getUserEmail())
                 .receiverId(receiver)
                 .totalAmount(amount)
                 .status("COMPLETED")

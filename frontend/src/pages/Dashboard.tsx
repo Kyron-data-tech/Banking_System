@@ -630,6 +630,7 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
   const [expanded, setExpanded] = useState(false);
   const isOut = tx.type === 'OUT';
   const isSettlement = tx.receiverId?.startsWith('BANK SETTLEMENT:') || tx.receiverId?.startsWith('SETTLEMENT:');
+  const isRazorpay = tx.parentReferenceNo?.startsWith('order_') || tx.senderId?.includes('Real Bank') || tx.packets?.some((p: any) => p.packetUtr?.startsWith('pay_'));
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 mb-3 overflow-hidden transition hover:shadow-md">
@@ -645,9 +646,16 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
             {isSettlement ? <Building2 size={20} /> : <Activity size={20} />}
           </div>
           <div>
-            <p className="font-extrabold text-sm text-slate-800">
-              {isSettlement ? 'Bank Settlement' : isOut ? 'Paid to' : 'Received from'}
-            </p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className="font-extrabold text-sm text-slate-800">
+                {isSettlement ? 'Bank Settlement' : isOut ? 'Paid to' : 'Received from'}
+              </p>
+              {isRazorpay && (
+                <span className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">
+                  ⚡ Real Bank
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-500 max-w-[150px] truncate">
               {isOut ? tx.receiverId : tx.senderId}
             </p>
@@ -1305,21 +1313,42 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
       setRefresh(r => r + 1);
     };
 
-    useEffect(() => {
+    const fetchHistory = () => {
       const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro';
-    Promise.all([
+      const upiId = verifiedUpiId || (email.split('@')[0] + '@okkyro');
+
+      const calls: Promise<any>[] = [
         upiApi.getInflows(email).catch(() => ({ data: [] })),
         upiApi.getOutflows(email).catch(() => ({ data: [] }))
-      ]).then(([inRes, outRes]) => {
-        const ins = inRes.data.map((tx: any) => ({ ...tx, type: 'IN' }));
-        const outs = outRes.data.map((tx: any) => ({ ...tx, type: 'OUT' }));
-        
-          const allTxs = [...ins, ...outs]; // Prefer OUT if same id
-          const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
-          const valid = uniqueTxs.filter((tx: any) => tx.status === 'COMPLETED');
+      ];
+
+      if (upiId && upiId !== email) {
+        calls.push(upiApi.getInflows(upiId).catch(() => ({ data: [] })));
+        calls.push(upiApi.getOutflows(upiId).catch(() => ({ data: [] })));
+      }
+
+      Promise.all(calls).then((responses) => {
+        const ins = [
+          ...responses[0].data.map((tx: any) => ({ ...tx, type: 'IN' })),
+          ...(responses[2] ? responses[2].data.map((tx: any) => ({ ...tx, type: 'IN' })) : [])
+        ];
+        const outs = [
+          ...responses[1].data.map((tx: any) => ({ ...tx, type: 'OUT' })),
+          ...(responses[3] ? responses[3].data.map((tx: any) => ({ ...tx, type: 'OUT' })) : [])
+        ];
+
+        const allTxs = [...ins, ...outs];
+        const uniqueTxs = Array.from(new Map(allTxs.map(tx => [tx.id, tx])).values());
+        const valid = uniqueTxs.filter((tx: any) => tx.status === 'COMPLETED');
         setHistory(valid.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       });
-  }, [refresh, user, backendUser]);
+    };
+
+    useEffect(() => {
+      fetchHistory();
+      const interval = setInterval(fetchHistory, 3000);
+      return () => clearInterval(interval);
+    }, [refresh, user, backendUser, activeTab, verifiedUpiId]);
 
   return (
     <MobileDashboardLayout 
@@ -1802,6 +1831,11 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
         onPaymentSuccess={(createdTx) => {
           setRefresh(r => r + 1);
           if (createdTx) {
+            const formatted = { 
+              ...createdTx, 
+              type: razorpayPurpose === 'PAY_MERCHANT' ? 'OUT' : 'IN' 
+            };
+            setHistory(prev => [formatted, ...prev.filter(t => t.id !== formatted.id)]);
             setActiveReceipt(createdTx);
             playKyroPaySoundbox(createdTx.totalAmount, 'hi');
           }
@@ -2336,6 +2370,11 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         onPaymentSuccess={(createdTx) => {
           setRefresh(r => r + 1);
           if (createdTx) {
+            const formatted = { 
+              ...createdTx, 
+              type: razorpayPurpose === 'PAY_MERCHANT' ? 'OUT' : 'IN' 
+            };
+            setHistory(prev => [formatted, ...prev.filter(t => t.id !== formatted.id)]);
             setActiveReceipt(createdTx);
           }
         }}

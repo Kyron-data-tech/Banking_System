@@ -139,6 +139,12 @@ public class UpiSplitService {
     public List<UpiParentTransaction> getInflowsForReceiver(String receiverId) {
         java.util.List<String> ids = new java.util.ArrayList<>();
         ids.add(receiverId);
+        if (receiverId.contains("@")) {
+            String prefix = receiverId.split("@")[0];
+            ids.add(prefix + "@okkyro");
+            ids.add(prefix + "@kyro");
+            ids.add(prefix + "@kyropay.com");
+        }
         userRepository.findByEmail(receiverId).ifPresent(u -> {
             if (u.getUpiId() != null) ids.add(u.getUpiId());
         });
@@ -151,11 +157,23 @@ public class UpiSplitService {
     public List<UpiParentTransaction> getOutflowsForSender(String senderId) {
         java.util.List<String> ids = new java.util.ArrayList<>();
         ids.add(senderId);
+        ids.add(senderId + " (via Real Bank)");
+        if (senderId.contains("@")) {
+            String prefix = senderId.split("@")[0];
+            ids.add(prefix + "@okkyro");
+            ids.add(prefix + "@okkyro (via Real Bank)");
+            ids.add(prefix + "@kyro");
+            ids.add(prefix + "@kyro (via Real Bank)");
+        }
         userRepository.findByEmail(senderId).ifPresent(u -> {
-            if (u.getUpiId() != null) ids.add(u.getUpiId());
+            if (u.getUpiId() != null) {
+                ids.add(u.getUpiId());
+                ids.add(u.getUpiId() + " (via Real Bank)");
+            }
         });
         userRepository.findByUpiId(senderId).ifPresent(u -> {
             ids.add(u.getEmail());
+            ids.add(u.getEmail() + " (via Real Bank)");
         });
         return upiParentTransactionRepository.findBySenderIdInOrderByCreatedAtDesc(ids);
     }
