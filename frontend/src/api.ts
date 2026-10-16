@@ -113,6 +113,8 @@ export const upiApi = {
   onboard: (email: string, upiId: string, mpin: string) => api.post(`/upi/onboard`, { email, upiId, mpin }),
   settle: (merchantId: string, amount: number, mpin: string, bankAccount?: string, ifsc?: string) =>
     api.post('/upi/settle', { merchantId, amount, mpin, bankAccount, ifsc }),
+  getDirectoryContacts: (phone?: string) => 
+    api.get(`/upi/directory/contacts${phone ? '?phone=' + encodeURIComponent(phone) : ''}`),
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };

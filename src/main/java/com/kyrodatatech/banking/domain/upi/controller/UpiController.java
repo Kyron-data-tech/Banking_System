@@ -114,6 +114,36 @@ public class UpiController {
         return ResponseEntity.ok(upiSplitService.getInflowsForReceiver(receiverId));
     }
 
+    @GetMapping("/directory/contacts")
+    public ResponseEntity<?> getDirectoryContacts(@RequestParam(required = false) String phone) {
+        List<Map<String, Object>> list = userRepository.findAll().stream()
+                .filter(u -> u.getFullName() != null && !u.getFullName().isBlank())
+                .map(u -> {
+                    String userPhone = u.getPhoneNumber() != null ? u.getPhoneNumber() : "98" + (Math.abs(u.getId().hashCode()) % 90000000 + 10000000);
+                    String userVpa = u.getUpiId() != null ? u.getUpiId() : u.getEmail();
+                    String badge = "NPCI UPI";
+                    if (u.getRoles() != null && !u.getRoles().isEmpty() && u.getRoles().iterator().next().getRoleType() != null && u.getRoles().iterator().next().getRoleType().name().contains("BANK")) {
+                        badge = "Core Banking CBS";
+                    } else if (u.getEmail() != null && u.getEmail().contains("merchant")) {
+                        badge = "Merchant Hub";
+                    }
+                    String cleanPhone = userPhone.replaceAll("\\D", "");
+                    if (cleanPhone.length() >= 10) {
+                        cleanPhone = cleanPhone.substring(cleanPhone.length() - 10);
+                    }
+                    return Map.<String, Object>of(
+                        "id", u.getId().toString(),
+                        "name", u.getFullName(),
+                        "phoneNumber", cleanPhone,
+                        "upiId", userVpa,
+                        "isUpiRegistered", true,
+                        "bankBadge", badge
+                    );
+                })
+                .toList();
+        return ResponseEntity.ok(list);
+    }
+
     @PostMapping("/settle")
     public ResponseEntity<?> settleToBank(@RequestBody Map<String, Object> request) {
         String merchantId = (String) request.get("merchantId");
