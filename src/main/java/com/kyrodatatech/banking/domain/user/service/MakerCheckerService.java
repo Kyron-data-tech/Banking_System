@@ -76,7 +76,11 @@ public class MakerCheckerService {
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        boolean isChecker = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_CHECKER"));
+        boolean isChecker = authentication.getAuthorities().stream().anyMatch(a -> 
+            a.getAuthority().equals("ROLE_CORP_CHECKER") ||
+            a.getAuthority().equals("ROLE_CORP_ADMIN") ||
+            a.getAuthority().equals("ROLE_PAYMENT_OPERATIONS")
+        );
         boolean isL1 = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_APPROVER_L1"));
         boolean isL2 = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_APPROVER_L2"));
         boolean isFinal = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_CORP_FINAL_AUTHORIZER"));

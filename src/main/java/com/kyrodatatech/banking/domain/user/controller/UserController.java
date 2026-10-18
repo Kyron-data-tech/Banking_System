@@ -22,7 +22,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN')")
+    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', 'CORP_ADMIN', 'CORP_USER_ADMIN', 'BANK_AUDITOR', 'CORPORATE_ONBOARDING')")
     public ResponseEntity<List<UserSummaryResponse>> getAllUsers() {
         List<UserSummaryResponse> users = userService.getAllUsers().stream()
                 .map(UserSummaryResponse::from)
@@ -31,7 +31,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN')")
+    @PreAuthorize("hasAnyRole('BANK_SUPER_ADMIN', 'BANK_USER_ADMIN', 'CORP_ADMIN', 'CORP_USER_ADMIN', 'BANK_AUDITOR')")
     public ResponseEntity<User> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }

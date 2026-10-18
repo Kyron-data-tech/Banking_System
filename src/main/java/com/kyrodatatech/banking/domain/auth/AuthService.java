@@ -134,12 +134,27 @@ public class AuthService {
 
         if (!userRepository.existsByEmail(request.getEmail())) {
             java.util.Set<Role> roles = new java.util.HashSet<>();
-            roleRepository.findByRoleType(RoleType.BANK_SUPER_ADMIN).ifPresent(roles::add);
-            roleRepository.findByRoleType(RoleType.CORP_MAKER).ifPresent(roles::add);
-            roleRepository.findByRoleType(RoleType.CORP_CHECKER).ifPresent(roles::add);
+            String emailLower = request.getEmail().toLowerCase();
+            if (emailLower.equals("admin@kyrobank.com")) {
+                roleRepository.findByRoleType(RoleType.BANK_SUPER_ADMIN).ifPresent(roles::add);
+            } else if (emailLower.contains("checker")) {
+                roleRepository.findByRoleType(RoleType.CORP_CHECKER).ifPresent(roles::add);
+            } else if (emailLower.contains("maker")) {
+                roleRepository.findByRoleType(RoleType.CORP_MAKER).ifPresent(roles::add);
+            } else if (emailLower.contains("aml") || emailLower.contains("sanction")) {
+                roleRepository.findByRoleType(RoleType.AML_SANCTIONS_REVIEWER).ifPresent(roles::add);
+            } else if (emailLower.contains("auditor")) {
+                roleRepository.findByRoleType(RoleType.BANK_AUDITOR).ifPresent(roles::add);
+            } else if (emailLower.contains("support")) {
+                roleRepository.findByRoleType(RoleType.CUSTOMER_SUPPORT).ifPresent(roles::add);
+            } else if (emailLower.contains("reconcil")) {
+                roleRepository.findByRoleType(RoleType.RECONCILIATION).ifPresent(roles::add);
+            } else {
+                roleRepository.findByRoleType(RoleType.CORP_VIEWER).ifPresent(roles::add);
+            }
             
             User magicUser = User.builder()
-                .fullName(request.getEmail().split("@")[0])
+                .fullName(request.getEmail().split("@")[0].toUpperCase())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .status(UserStatus.ACTIVE)

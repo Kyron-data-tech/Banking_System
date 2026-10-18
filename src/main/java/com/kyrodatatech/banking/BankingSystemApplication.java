@@ -30,6 +30,16 @@ import java.util.Set;
  * @author  KyroDataTech Engineering Team
  * @version 1.0.0
  */
+import com.kyrodatatech.banking.domain.transaction.entity.Transaction;
+import com.kyrodatatech.banking.domain.transaction.enums.TransactionStatus;
+import com.kyrodatatech.banking.domain.transaction.enums.TransactionType;
+import com.kyrodatatech.banking.domain.transaction.repository.TransactionRepository;
+import com.kyrodatatech.banking.domain.user.entity.MakerCheckerRequest;
+import com.kyrodatatech.banking.domain.user.enums.ApprovalStatus;
+import com.kyrodatatech.banking.domain.user.repository.MakerCheckerRepository;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 @SpringBootApplication
 public class BankingSystemApplication {
 
@@ -41,6 +51,8 @@ public class BankingSystemApplication {
     public CommandLineRunner seedDemoUsers(
             UserRepository userRepository,
             RoleRepository roleRepository,
+            TransactionRepository transactionRepository,
+            MakerCheckerRepository makerCheckerRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
             // 1. Seed Roles
@@ -70,6 +82,121 @@ public class BankingSystemApplication {
                     userRepository.save(user);
                     System.out.println("SEEDED DEMO USER: " + email + " [" + roleType + "]");
                 }
+            }
+
+            // 3. Seed Realistic Pending Maker-Checker Transactions (Persistent DB with real UUIDs)
+            if (makerCheckerRepository.count() == 0) {
+                User corpmaker = userRepository.findByEmail("corpmaker@kyrobank.com").orElse(null);
+                User bankAdmin = userRepository.findByEmail("admin@kyrobank.com").orElse(null);
+
+                if (corpmaker != null) {
+                    // Instruction 1: Tier-1 (<= 1 Lakh -> Approved by Checker)
+                    Transaction tx1 = Transaction.builder()
+                        .transactionRefNo("TXN-2026-NEFT-884102")
+                        .transactionType(TransactionType.NEFT)
+                        .amount(new BigDecimal("85000.00"))
+                        .currency("INR")
+                        .debitAccountNo("AC-CORP-98231")
+                        .debitAccountName("Corporate Primary Treasury")
+                        .creditAccountNo("AC-DELL-994123")
+                        .creditAccountName("Dell Enterprise India")
+                        .creditIfscCode("HDFC0001234")
+                        .narration("Office Hardware & Server Maintenance Disbursement")
+                        .createdBy(corpmaker)
+                        .status(TransactionStatus.PENDING_CHECKER)
+                        .build();
+                    tx1 = transactionRepository.save(tx1);
+
+                    MakerCheckerRequest req1 = MakerCheckerRequest.builder()
+                        .actionType("INITIATE_PAYMENT")
+                        .entityId(tx1.getId())
+                        .entityType("TRANSACTION")
+                        .makerId(corpmaker.getId())
+                        .makerName(corpmaker.getFullName())
+                        .status(ApprovalStatus.PENDING_CHECKER)
+                        .priority("MEDIUM")
+                        .requestPayload("{\"beneficiary\":\"Dell Enterprise India\",\"amount\":85000,\"type\":\"NEFT\",\"refNo\":\"TXN-2026-NEFT-884102\",\"destinationAccount\":\"AC-DELL-994123\",\"narration\":\"Office Hardware & Server Maintenance Disbursement\"}")
+                        .build();
+                    req1 = makerCheckerRepository.save(req1);
+                    tx1.setMakerCheckerRequestId(req1.getId());
+                    transactionRepository.save(tx1);
+
+                    // Instruction 2: Tier-2 (1L - 10L -> Requires L1 & L2 sign-off)
+                    Transaction tx2 = Transaction.builder()
+                        .transactionRefNo("TXN-2026-RTGS-992314")
+                        .transactionType(TransactionType.RTGS)
+                        .amount(new BigDecimal("450000.00"))
+                        .currency("INR")
+                        .debitAccountNo("AC-CORP-98231")
+                        .debitAccountName("Corporate Primary Treasury")
+                        .creditAccountNo("AC-TATA-332198")
+                        .creditAccountName("TATA Power Grid Corp")
+                        .creditIfscCode("SBIN0004521")
+                        .narration("Quarterly Industrial Power Grid Settlement")
+                        .createdBy(corpmaker)
+                        .status(TransactionStatus.PENDING_CHECKER)
+                        .build();
+                    tx2 = transactionRepository.save(tx2);
+
+                    MakerCheckerRequest req2 = MakerCheckerRequest.builder()
+                        .actionType("INITIATE_PAYMENT")
+                        .entityId(tx2.getId())
+                        .entityType("TRANSACTION")
+                        .makerId(corpmaker.getId())
+                        .makerName(corpmaker.getFullName())
+                        .status(ApprovalStatus.PENDING_CHECKER)
+                        .priority("HIGH")
+                        .requestPayload("{\"beneficiary\":\"TATA Power Grid Corp\",\"amount\":450000,\"type\":\"RTGS\",\"refNo\":\"TXN-2026-RTGS-992314\",\"destinationAccount\":\"AC-TATA-332198\",\"narration\":\"Quarterly Industrial Power Grid Settlement\"}")
+                        .build();
+                    req2 = makerCheckerRepository.save(req2);
+                    tx2.setMakerCheckerRequestId(req2.getId());
+                    transactionRepository.save(tx2);
+
+                    // Instruction 3: Tier-3 (> 10L -> Requires Final Authorizer / CFO)
+                    Transaction tx3 = Transaction.builder()
+                        .transactionRefNo("TXN-2026-IMPS-774129")
+                        .transactionType(TransactionType.IMPS)
+                        .amount(new BigDecimal("1850000.00"))
+                        .currency("INR")
+                        .debitAccountNo("AC-CORP-98231")
+                        .debitAccountName("Corporate Primary Treasury")
+                        .creditAccountNo("AC-INFY-100293")
+                        .creditAccountName("Infosys Tech Services - Payroll Escrow")
+                        .creditIfscCode("ICIC0000912")
+                        .narration("Commercial Payroll Batch #109 (140 Engineering Personnel)")
+                        .createdBy(corpmaker)
+                        .status(TransactionStatus.PENDING_CHECKER)
+                        .build();
+                    tx3 = transactionRepository.save(tx3);
+
+                    MakerCheckerRequest req3 = MakerCheckerRequest.builder()
+                        .actionType("INITIATE_PAYMENT")
+                        .entityId(tx3.getId())
+                        .entityType("TRANSACTION")
+                        .makerId(corpmaker.getId())
+                        .makerName(corpmaker.getFullName())
+                        .status(ApprovalStatus.PENDING_CHECKER)
+                        .priority("CRITICAL")
+                        .requestPayload("{\"beneficiary\":\"Infosys Tech Services - Payroll Escrow\",\"amount\":1850000,\"type\":\"IMPS\",\"refNo\":\"TXN-2026-IMPS-774129\",\"destinationAccount\":\"AC-INFY-100293\",\"narration\":\"Commercial Payroll Batch #109 (140 Engineering Personnel)\"}")
+                        .build();
+                    req3 = makerCheckerRepository.save(req3);
+                    tx3.setMakerCheckerRequestId(req3.getId());
+                    transactionRepository.save(tx3);
+                }
+
+                if (bankAdmin != null) {
+                    MakerCheckerRequest req4 = MakerCheckerRequest.builder()
+                        .actionType("CREATE_USER")
+                        .entityType("USER")
+                        .makerId(bankAdmin.getId())
+                        .makerName("Bank Super Admin")
+                        .status(ApprovalStatus.PENDING_CHECKER)
+                        .priority("LOW")
+                        .requestPayload("{\"fullName\":\"Siddharth Verma\",\"email\":\"siddharth.compliance@kyrobank.com\",\"role\":\"ROLE_COMPLIANCE_OFFICER\",\"department\":\"Risk & Compliance\",\"clearance\":\"TIER-3 RISK\"}")
+                        .build();
+                    makerCheckerRepository.save(req4);
+                }
+                System.out.println(">>> SEEDED 4 REAL MAKER-CHECKER TRANSACTIONS IN PERSISTENT DATABASE <<<");
             }
         };
     }
