@@ -14,23 +14,20 @@ import { BankAccountsView } from '../components/BankAccountsView';
 import { SoundboxTester } from '../components/SoundboxTester';
 import { playKyroPaySoundbox } from '../utils/soundbox';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { BankEmployeePortal } from '../components/BankEmployeePortal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
-  Camera, LayoutDashboard, Users, CreditCard, ShieldCheck, Activity,
-  LogOut, Banknote, Archive, Layers, Bot,
+  Camera, Users, CreditCard, ShieldCheck, Activity,
+  LogOut, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
-  Menu, X, Plus, QrCode,
+  X, Plus, QrCode,
   Receipt, FileSpreadsheet, Building2, ArrowDownToLine,
   Gift, Volume2, Smartphone, Send
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { userApi, paymentApi, llmApi, authApi, upiApi } from '../api';
+import { upiApi } from '../api';
 import { History as HistoryIcon, ChevronDown } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-
-// â”€â”€â”€ Types & Global UI State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-type Page = 'dashboard' | 'users' | 'transactions' | 'approvals' | 'payments' | 'collections' | 'liquidity' | 'llm';
 
 let toastTimeout: any;
 const Toast = ({ message, type, onClose }: any) => {
@@ -62,568 +59,9 @@ const Modal = ({ isOpen, onClose, title, children }: any) => {
   );
 };
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const statusBadge: Record<string, string> = {
-  ACTIVE:           'bg-emerald-100 text-emerald-700',
-  PENDING_APPROVAL: 'bg-amber-100 text-amber-700',
-  SUSPENDED:        'bg-red-100 text-red-700',
-  DEACTIVATED:      'bg-slate-100 text-slate-500',
-  COMPLETED:        'bg-emerald-100 text-emerald-700',
-  AML_FLAGGED:      'bg-red-100 text-red-700',
-  PENDING:          'bg-amber-100 text-amber-700',
-  PROCESSING:       'bg-blue-100 text-blue-700',
-};
-
-const roleBadge = (role: string) => {
-  if (role.includes('SUPER_ADMIN')) return 'bg-red-100 text-red-700';
-  if (role.includes('BANK_')) return 'bg-blue-100 text-blue-700';
-  if (role.includes('CORP_')) return 'bg-green-100 text-green-700';
-  return 'bg-slate-100 text-slate-600';
-};
-
-const formatRole = (role: string) =>
-  role.replace('ROLE_', '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-
-// â”€â”€â”€ Sidebar & Topbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const navItems = [
-  { id: 'dashboard',    label: 'Dashboard',       icon: LayoutDashboard },
-  { id: 'users',        label: 'User Management', icon: Users },
-  { id: 'transactions', label: 'Transactions',    icon: CreditCard },
-  { id: 'approvals',    label: 'Maker-Checker',   icon: ShieldCheck },
-  { id: 'payments',     label: 'Payments',        icon: Banknote },
-  { id: 'collections',  label: 'Collections',     icon: Archive },
-  { id: 'liquidity',    label: 'Liquidity',       icon: Layers },
-  { id: 'llm',          label: 'AI Analysis',     icon: Bot },
-];
-
-const canManageUsers = (roles: string[]) =>
-  roles.includes('ROLE_BANK_SUPER_ADMIN') || roles.includes('ROLE_BANK_USER_ADMIN');
-
-const canReviewApprovals = (roles: string[]) =>
-  roles.some(role => [
-    'ROLE_BANK_SUPER_ADMIN',
-    'ROLE_BANK_USER_ADMIN',
-    'ROLE_CORP_ADMIN',
-    'ROLE_CORP_CHECKER',
-    'ROLE_CORP_APPROVER_L1',
-    'ROLE_CORP_APPROVER_L2',
-    'ROLE_CORP_FINAL_AUTHORIZER',
-  ].includes(role));
-
-const Sidebar = ({ page, setPage, open, setOpen }: any) => {
-  const { user, logout } = useAuth();
-  const roles = user?.roles ?? [];
-
-  return (
-    <>
-      {open && <div className="fixed inset-0 bg-black/50 z-20 lg:hidden" onClick={() => setOpen(false)} />}
-      <aside className={`fixed lg:relative z-30 inset-y-0 left-0 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-200 ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
-          <KyroLogo size="sm" variant="bank" />
-          <span className="text-lg font-black tracking-tight">KyroBank <span className="text-emerald-400 font-extrabold">Core CBS</span></span>
-          <button onClick={() => setOpen(false)} className="ml-auto lg:hidden text-slate-400"><X size={18} /></button>
-        </div>
-        <div className="px-4 py-4 border-b border-slate-800">
-          <div className="flex items-center gap-3 bg-slate-800 rounded-xl px-3 py-3">
-            <div className="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-sm font-bold shrink-0">{user?.fullName?.charAt(0) ?? 'U'}</div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.fullName}</p>
-              <p className="text-xs text-slate-400 truncate">{formatRole(user?.roles?.[0] ?? '')}</p>
-            </div>
-          </div>
-        </div>
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto no-scrollbar">
-          {navItems.filter(item => {
-            if (item.id === 'users') return canManageUsers(roles);
-            if (item.id === 'approvals') return canReviewApprovals(roles);
-            return true;
-          }).map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => { setPage(id as Page); setOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${page === id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
-              <Icon size={18} />{label}
-            </button>
-          ))}
-        </nav>
-        <div className="p-3 border-t border-slate-800">
-          <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
-            <LogOut size={18} />Logout
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-};
-
-const Topbar = ({ page, setOpen }: any) => {
-  const { user, logout } = useAuth();
-  const label = navItems.find(n => n.id === page)?.label ?? 'Dashboard';
-  return (
-    <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-6 gap-4 sticky top-0 z-10 transition-colors">
-      <button onClick={() => setOpen(true)} className="lg:hidden text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"><Menu size={22} /></button>
-      <h1 className="text-xl font-bold text-slate-800 dark:text-white">{label}</h1>
-      <div className="ml-auto flex items-center gap-3">
-        <ThemeToggle />
-        <span className="hidden sm:flex items-center gap-1.5 text-xs bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full font-medium border border-emerald-200 dark:border-emerald-800">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />CBS Core Live
-        </span>
-        <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-          <div className="text-right">
-            <p className="text-xs font-bold text-slate-800 dark:text-white leading-tight">{user?.fullName || 'Bank Staff'}</p>
-            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">{formatRole(user?.roles?.[0] ?? '')}</p>
-          </div>
-        </div>
-        <button 
-          onClick={() => { logout(); window.location.href = '/'; }} 
-          title="Sign out of Core Banking CBS"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/40 transition border border-red-100 dark:border-red-900 cursor-pointer"
-        >
-          <LogOut size={14} />
-          <span className="hidden sm:inline">Sign Out</span>
-        </button>
-      </div>
-    </header>
-  );
-};
-
-// â”€â”€â”€ Page Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-const DashboardPage = () => {
-  const [users, setUsers] = useState<any[]>([]);
-  const { user } = useAuth();
-  useEffect(() => { userApi.getAll().then(r => setUsers(r.data)).catch(() => {}); }, []);
-  return (
-    <div className="p-6 space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-6 text-white shadow-md">
-        <p className="text-blue-200 text-sm mb-1">Welcome back,</p>
-        <h2 className="text-2xl font-bold">{user?.fullName} ðŸ‘‹</h2>
-        <p className="text-blue-200 text-sm mt-1">Role: {formatRole(user?.roles?.[0] ?? '')}</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {[
-          { icon: Users, label: "Total Users", val: users.length || 8, sub: "Registered accounts", col: "bg-blue-500" },
-          { icon: ShieldCheck, label: "Pending Approvals", val: 0, sub: "All clear", col: "bg-emerald-500" },
-          { icon: TrendingUp, label: "Daily Volume", val: "₹42.5M", sub: "+5.2% vs yesterday", col: "bg-violet-500" },
-          { icon: AlertTriangle, label: "AML Alerts", val: 3, sub: "Requires review", col: "bg-red-500" }
-        ].map((s, i) => (
-          <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 flex items-start gap-4 shadow-sm hover:shadow-md transition">
-            <div className={`p-3 rounded-xl ${s.col}`}><s.icon size={22} className="text-white" /></div>
-            <div>
-              <p className="text-sm text-slate-500">{s.label}</p>
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{s.val}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{s.sub}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const UsersPage = ({ showToast }: any) => {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ fullName: '', email: '', role: 'CORP_MAKER' });
-
-  const fetchUsers = () => {
-    setLoading(true);
-    userApi.getAll().then(r => setUsers(r.data)).catch(() => {}).finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchUsers(); }, []);
-
-  const handleAddUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await authApi.register({ ...formData, password: 'password123' });
-      setIsModalOpen(false);
-      showToast('User created successfully and saved to Database!', 'success');
-      fetchUsers(); // Refresh the table automatically
-    } catch (error: any) {
-      const msg = error.response?.data?.message || error.message || 'Failed to create user in database.';
-      showToast(msg, 'error');
-    }
-  };
-
-  return (
-    <div className="p-6">
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h3 className="font-bold text-slate-900">All Users</h3>
-          <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1.5 text-sm bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
-            <Plus size={16} /> Add User
-          </button>
-        </div>
-        {loading ? (
-          <div className="p-12 text-center text-slate-400">Loading from databaseâ€¦</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
-              <tr>
-                <th className="px-6 py-3 text-left">Name</th>
-                <th className="px-6 py-3 text-left">Email</th>
-                <th className="px-6 py-3 text-left">Role(s)</th>
-                <th className="px-6 py-3 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.map(u => (
-                <tr key={u.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-medium text-slate-900">{u.fullName}</td>
-                  <td className="px-6 py-4 text-slate-500">{u.email}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {(u.roles ?? []).map((r: any) => (
-                        <span key={r.id ?? r} className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${roleBadge(r.roleType ?? r)}`}>
-                          {formatRole(r.roleType ?? r)}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-[10px] font-bold px-2.5 py-1 uppercase rounded-full ${statusBadge[u.status] ?? 'bg-slate-100'}`}>
-                      {u.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New User">
-        <form onSubmit={handleAddUser} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name</label>
-            <input required type="text" value={formData.fullName} onChange={e => setFormData({ ...formData, fullName: e.target.value })} placeholder="John Doe" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="john@company.com" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <button type="submit" className="w-full bg-slate-900 text-white font-medium py-2.5 rounded-lg hover:bg-slate-800 transition">
-            Save to Database
-          </button>
-        </form>
-      </Modal>
-    </div>
-  );
-};
-
-const CollectionsPage = ({ showToast }: any) => {
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [qrValue, setQrValue] = useState("");
-
-  const handleGenerateQR = () => {
-    setQrValue(`kyrobank://upi/pay?pa=merchant@kyrobank&pn=KyroCorp&am=1500.00&tr=${Date.now()}`);
-    setQrModalOpen(true);
-  };
-
-  return (
-    <div className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">QR Collection</h3>
-          <p className="text-sm text-slate-500 mb-6 h-10">Generate dynamic UPI QR codes for instant payments.</p>
-          <button onClick={handleGenerateQR} className="w-full py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white text-sm font-semibold rounded-xl transition">
-            Generate Real QR
-          </button>
-        </div>
-        
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Virtual Accounts</h3>
-          <p className="text-sm text-slate-500 mb-6 h-10">Unique virtual IBANs for reconciliation.</p>
-          <button onClick={() => showToast('Virtual Account VA987654321 created and saved to DB.', 'success')} className="w-full py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white text-sm font-semibold rounded-xl transition">
-            Create Virtual Account
-          </button>
-        </div>
-      </div>
-
-      <Modal isOpen={qrModalOpen} onClose={() => setQrModalOpen(false)} title="Dynamic UPI QR Code">
-        <div className="flex flex-col items-center justify-center p-6 space-y-6">
-          <div className="p-4 bg-white rounded-xl shadow-inner border border-slate-100">
-            {qrValue && <QRCodeSVG value={qrValue} size={200} level="H" includeMargin />}
-          </div>
-          <p className="text-sm text-slate-500 text-center">Scan this code with any UPI app to pay ₹1,500 to KyroCorp.</p>
-          <div className="bg-slate-50 p-3 rounded-lg text-xs font-mono break-all text-slate-600 w-full text-center">
-            {qrValue}
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-};
-
-const ApprovalsPage = ({ showToast }: any) => {
-  const [pending, setPending] = useState([
-    { id: 'REQ-9942', type: 'RTGS Payment', amount: '₹15,00,000', maker: 'maker@kyrobank.com', date: 'Just now' },
-    { id: 'REQ-9943', type: 'Virtual Account Creation', amount: 'N/A', maker: 'corpadmin@kyrobank.com', date: '2 mins ago' }
-  ]);
-
-  const handleApprove = (id: string) => {
-    setPending(p => p.filter(x => x.id !== id));
-    showToast(`Request ${id} approved and saved to database.`, 'success');
-  };
-
-  const handleReject = (id: string) => {
-    setPending(p => p.filter(x => x.id !== id));
-    showToast(`Request ${id} rejected.`, 'error');
-  };
-
-  if (pending.length === 0) {
-    return (
-      <div className="p-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm animate-fade-in-up">
-          <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-slate-800">All Clear</h3>
-          <p className="text-slate-500 mt-2">No pending maker-checker requests require your approval at this time.</p>
-          <button onClick={() => showToast('Refreshed approval queue. No new items.', 'info')} className="mt-6 px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition text-sm">
-            Refresh Queue
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-6">
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-          <h3 className="font-bold text-slate-900">Pending Approvals</h3>
-          <span className="bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1 rounded-full">{pending.length} Requests</span>
-        </div>
-        <table className="w-full text-sm">
-          <thead className="bg-white text-xs text-slate-500 uppercase border-b border-slate-100">
-            <tr>
-              <th className="px-6 py-3 text-left">Request ID</th>
-              <th className="px-6 py-3 text-left">Type</th>
-              <th className="px-6 py-3 text-left">Amount</th>
-              <th className="px-6 py-3 text-left">Submitted By (Maker)</th>
-              <th className="px-6 py-3 text-right">Actions (Checker)</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {pending.map(req => (
-              <tr key={req.id} className="hover:bg-slate-50 transition">
-                <td className="px-6 py-4 font-mono font-medium text-slate-700">{req.id}</td>
-                <td className="px-6 py-4 text-slate-900 font-medium">{req.type}</td>
-                <td className="px-6 py-4 text-slate-600">{req.amount}</td>
-                <td className="px-6 py-4 text-slate-500 text-xs">
-                  {req.maker} <br/> <span className="text-slate-400">{req.date}</span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <button onClick={() => handleReject(req.id)} className="px-3 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 font-medium rounded-lg transition">Reject</button>
-                    <button onClick={() => handleApprove(req.id)} className="px-3 py-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-medium rounded-lg transition">Approve</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-};
-
-const LiquidityPage = ({ showToast }: any) => {
-  return (
-    <div className="p-6 space-y-6">
-      <div className="bg-gradient-to-r from-blue-900 to-slate-900 rounded-2xl p-8 text-white shadow-lg">
-        <h2 className="text-2xl font-bold mb-2">Automated Cash Sweeping</h2>
-        <p className="text-slate-300 max-w-2xl text-sm leading-relaxed">
-          Liquidity management allows corporate clients to automatically move money from subsidiary accounts (Sub-Accounts) into a central Master Account at the end of the day. This maximizes interest earned and centralizes corporate funds without manual work.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm col-span-2">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-slate-800">Live Sweep Status (Today)</h3>
-            <button onClick={() => showToast('Manual sweep triggered. Sweeping all sub-accounts to master.', 'success')} className="text-sm bg-slate-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-slate-800 transition">Force Sweep Now</button>
-          </div>
-          <table className="w-full text-sm">
-            <thead className="text-xs text-slate-500 uppercase">
-              <tr className="border-b border-slate-100">
-                <th className="pb-3 text-left">Account Name</th>
-                <th className="pb-3 text-left">Account Number</th>
-                <th className="pb-3 text-right">EOD Balance</th>
-                <th className="pb-3 text-right">Swept Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              <tr>
-                <td className="py-4 font-medium text-slate-900">Delhi Branch (Sub)</td>
-                <td className="py-4 font-mono text-slate-500">AC-4432-1101</td>
-                <td className="py-4 text-right text-slate-400">₹0</td>
-                <td className="py-4 text-right font-medium text-red-500">-₹5,00,000</td>
-              </tr>
-              <tr>
-                <td className="py-4 font-medium text-slate-900">Mumbai Branch (Sub)</td>
-                <td className="py-4 font-mono text-slate-500">AC-4432-1102</td>
-                <td className="py-4 text-right text-slate-400">₹0</td>
-                <td className="py-4 text-right font-medium text-red-500">-₹12,50,000</td>
-              </tr>
-              <tr className="bg-emerald-50/50">
-                <td className="py-4 font-bold text-emerald-800 flex items-center gap-2">HQ Master Account</td>
-                <td className="py-4 font-mono text-emerald-700 font-bold">AC-4432-0000</td>
-                <td className="py-4 text-right font-bold text-emerald-700">₹5,17,50,000</td>
-                <td className="py-4 text-right font-bold text-emerald-600">+₹17,50,000</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-4">Sweep Configuration</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-              <div>
-                <p className="font-medium text-sm text-slate-900">Frequency</p>
-                <p className="text-xs text-slate-500">When to sweep funds</p>
-              </div>
-              <span className="text-sm font-bold bg-slate-100 px-3 py-1 rounded-lg">End of Day</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-              <div>
-                <p className="font-medium text-sm text-slate-900">Minimum Balance</p>
-                <p className="text-xs text-slate-500">Amount to leave in sub-account</p>
-              </div>
-              <span className="text-sm font-bold bg-slate-100 px-3 py-1 rounded-lg">₹0</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-medium text-sm text-slate-900">Target Account</p>
-                <p className="text-xs text-slate-500">Master pooling account</p>
-              </div>
-              <span className="text-sm font-bold bg-slate-100 px-3 py-1 rounded-lg font-mono">...0000</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TransactionsPage = () => (
-  <div className="p-6">
-    <div className="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500 shadow-sm animate-fade-in-up">
-      <Activity size={48} className="mx-auto mb-4 text-slate-300" />
-      <h3 className="text-xl font-bold text-slate-800">Transaction Ledger</h3>
-      <p className="mt-2">Ledger synced up to today. Displaying millions of rows requires server-side pagination.</p>
-    </div>
-  </div>
-);
-
-const PaymentsPage = ({ showToast }: any) => {
-  const [type, setType] = useState('NEFT');
-  const [amount, setAmount] = useState('');
-  const [debitAccountNo, setDebitAccountNo] = useState('');
-  const [creditAccountNo, setCreditAccountNo] = useState('');
-  const [creditAccountName, setCreditAccountName] = useState('');
-  const [creditIfscCode, setCreditIfscCode] = useState('');
-  const [upiVpa, setUpiVpa] = useState('');
-  const [swiftBic, setSwiftBic] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const submitPayment = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setSubmitting(true);
-    try {
-      const payload: Record<string, unknown> = {
-        amount: Number(amount),
-        currency: type === 'SWIFT' ? 'USD' : 'INR',
-        debitAccountNo,
-        creditAccountNo: type === 'UPI' ? `UPI-${upiVpa}` : creditAccountNo,
-        creditAccountName,
-        creditIfscCode: creditIfscCode || undefined,
-        upiVpa: type === 'UPI' ? upiVpa : undefined,
-        swiftBic: type === 'SWIFT' ? swiftBic : undefined,
-      };
-      const response = await paymentApi.initiate(type, payload);
-      showToast(`Payment ${response.data.transactionRefNo} submitted for approval.`, 'success');
-      setAmount('');
-      setCreditAccountNo('');
-      setCreditAccountName('');
-    } catch (error: any) {
-      showToast(error.response?.data?.message ?? 'Payment submission failed.', 'error');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const requiresIfsc = ['NEFT', 'RTGS', 'IMPS', 'ACH'].includes(type);
-  const requiresBeneficiaryAccount = !['UPI'].includes(type);
-
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {['INTERNAL', 'NEFT', 'RTGS', 'IMPS', 'UPI', 'SWIFT', 'ACH', 'BULK'].map(rail => (
-          <button key={rail} type="button" onClick={() => setType(rail)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${type === rail ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-400'}`}>
-            {rail}
-          </button>
-        ))}
-      </div>
-      <form onSubmit={submitPayment} className="bg-white rounded-2xl border border-slate-200 p-6 max-w-2xl space-y-4 shadow-sm">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Initiate {type} payment</h2>
-          <p className="text-sm text-slate-500 mt-1">The payment will be validated and routed to maker-checker approval.</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input required value={debitAccountNo} onChange={event => setDebitAccountNo(event.target.value)} placeholder="Source account number" className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />
-          <input required type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} placeholder={type === 'RTGS' ? 'Amount (minimum ₹2,00,000)' : 'Amount'} className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />
-          {requiresBeneficiaryAccount && <input required value={creditAccountNo} onChange={event => setCreditAccountNo(event.target.value)} placeholder="Beneficiary account number" className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />}
-          <input required value={creditAccountName} onChange={event => setCreditAccountName(event.target.value)} placeholder="Beneficiary name" className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />
-          {requiresIfsc && <input required value={creditIfscCode} onChange={event => setCreditIfscCode(event.target.value.toUpperCase())} placeholder="Beneficiary IFSC" className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />}
-          {type === 'UPI' && <input required value={upiVpa} onChange={event => setUpiVpa(event.target.value)} placeholder="UPI VPA, e.g. user@bank" className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />}
-          {type === 'SWIFT' && <input required value={swiftBic} onChange={event => setSwiftBic(event.target.value.toUpperCase())} placeholder="SWIFT BIC" className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm" />}
-        </div>
-        <button disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition">
-          {submitting ? 'Submitting...' : 'Submit payment for approval'}
-        </button>
-      </form>
-    </div>
-  );
-};
-
-const LlmPage = ({ showToast }: any) => {
-  const [details, setDetails] = useState('');
-  const [analysis, setAnalysis] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const analyze = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!details.trim()) return;
-    setLoading(true);
-    try {
-      const response = await llmApi.analyze(details.trim());
-      setAnalysis(response.data.analysis ?? 'No analysis returned.');
-    } catch (error: any) {
-      const message = error.response?.data?.message ?? 'AI analysis is unavailable.';
-      setAnalysis(message);
-      showToast(message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="p-6 max-w-3xl space-y-6">
-      <form onSubmit={analyze} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-        <div className="flex items-center gap-3 mb-4"><Bot size={24} className="text-blue-600" /><div><h2 className="text-xl font-bold text-slate-900">AI transaction analysis</h2><p className="text-sm text-slate-500">Analyze a transaction for AML and fraud risk indicators.</p></div></div>
-        <textarea required rows={5} value={details} onChange={event => setDetails(event.target.value)} placeholder="Describe the transaction, beneficiary, amount, country, and history..." className="w-full border border-slate-200 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none" />
-        <button disabled={loading || !details.trim()} className="mt-4 w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition">{loading ? 'Analyzing...' : 'Analyze transaction'}</button>
-      </form>
-      {analysis && <div className="bg-slate-900 text-emerald-300 rounded-2xl p-6 whitespace-pre-wrap text-sm shadow-sm">{analysis}</div>}
-    </div>
-  );
-};
-
-// â”€â”€â”€ Main App Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 // --------------------------------------------------------------------------------
-// NEW HACKATHON DASHBOARDS: Normal User (Sender) & Merchant (Receiver/Sender)
+// HACKATHON DASHBOARDS: Normal User (Sender) & Merchant (Receiver/Sender)
+// (Legacy employee pages replaced by BankEmployeePortal)
 // --------------------------------------------------------------------------------
 
 const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: any) => void }) => {
@@ -2406,8 +1844,6 @@ const Dashboard = ({ initialTab }: { initialTab?: string }) => {
   const isBankEmployee = userType === 'bank_employee' || (!userType && hasBankRole);
   const isMerchant = !isBankEmployee && userType === 'merchant';
 
-  const [page, setPage] = useState<Page>('dashboard');
-
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [verifiedUpiId, setVerifiedUpiId] = useState<string | null>(null);
   const [newUpiId, setNewUpiId] = useState('');
@@ -2449,7 +1885,6 @@ const Dashboard = ({ initialTab }: { initialTab?: string }) => {
           setOnboardingLoading(false);
       }
     };
-const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toast, setToast] = useState<{msg: string, type: string} | null>(null);
 
   const showToast = (msg: string, type = 'info') => {
@@ -2458,23 +1893,6 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     toastTimeout = setTimeout(() => setToast(null), 4000);
   };
 
-  const renderPage = () => {
-    switch (page) {
-      case 'dashboard':    return <DashboardPage />;
-      case 'users':        return <UsersPage showToast={showToast} />;
-      case 'transactions': return <TransactionsPage />;
-      case 'approvals':    return <ApprovalsPage showToast={showToast} />;
-      case 'payments':     return <PaymentsPage showToast={showToast} />;
-      case 'collections':  return <CollectionsPage showToast={showToast} />;
-      case 'liquidity':    return <LiquidityPage />;
-      case 'llm':          return <LlmPage />;
-      default:             return <DashboardPage />;
-    }
-  };
-
-
-
-
   let DashboardContent = null;
   if (isMerchant) {
     DashboardContent = <MerchantDashboard verifiedUpiId={verifiedUpiId} initialTab={initialTab} />;
@@ -2482,20 +1900,16 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     DashboardContent = <PhonePeDashboard verifiedUpiId={verifiedUpiId} initialTab={initialTab} />;
   } else {
     DashboardContent = (
-      <div className="flex h-screen bg-white/50 backdrop-blur-3xl overflow-hidden font-sans relative z-10">
-      <Sidebar page={page} setPage={setPage} open={sidebarOpen} setOpen={setSidebarOpen} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <Topbar page={page} setOpen={setSidebarOpen} />
-        <main className="flex-1 overflow-y-auto no-scrollbar">{renderPage()}</main>
-        {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      </div>
-    </div>
+      <BankEmployeePortal 
+        onSignOut={() => { logout(); signOut(); window.location.href = '/'; }} 
+        onSwitchToConsumer={() => { localStorage.setItem('userType', 'user'); window.location.reload(); }}
+      />
     );
   }
 
   return (
     <>
-
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       {!isBankEmployee && !isMerchant && needsOnboarding && (
         <div className="fixed inset-0 bg-slate-900/90 z-[9999] flex flex-col items-center justify-center p-4">

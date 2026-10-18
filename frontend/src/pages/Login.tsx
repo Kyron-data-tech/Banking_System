@@ -22,14 +22,14 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { email: 'maker@corp.com', label: 'Corporate Maker', role: 'CORP_MAKER', badgeColor: 'border-blue-200 text-blue-700 bg-blue-50' },
-  { email: 'checker@corp.com', label: 'Corporate Checker', role: 'CORP_CHECKER', badgeColor: 'border-indigo-200 text-indigo-700 bg-indigo-50' },
-  { email: 'viewer@corp.com', label: 'Corporate Viewer', role: 'CORP_VIEWER', badgeColor: 'border-slate-200 text-slate-700 bg-slate-50' },
-  { email: 'admin@corp.com', label: 'Corporate Admin', role: 'CORP_ADMIN', badgeColor: 'border-purple-200 text-purple-700 bg-purple-50' },
-  { email: 'ops@bank.com', label: 'Payment Operations', role: 'PAYMENT_OPERATIONS', badgeColor: 'border-emerald-200 text-emerald-700 bg-emerald-50' },
-  { email: 'audit@bank.com', label: 'Bank Auditor', role: 'BANK_AUDITOR', badgeColor: 'border-rose-200 text-rose-700 bg-rose-50' },
-  { email: 'compliance@bank.com', label: 'Compliance Officer', role: 'COMPLIANCE_OFFICER', badgeColor: 'border-amber-200 text-amber-700 bg-amber-50' },
-  { email: 'superadmin@bank.com', label: 'Bank Super Admin', role: 'BANK_SUPER_ADMIN', badgeColor: 'border-red-200 text-red-700 bg-red-50' },
+  { email: 'admin@kyrobank.com', label: 'Bank Super Admin', role: 'BANK_SUPER_ADMIN', badgeColor: 'border-red-200 text-red-700 bg-red-50' },
+  { email: 'paymentoperations@kyrobank.com', label: 'Payment Operations', role: 'PAYMENT_OPERATIONS', badgeColor: 'border-emerald-200 text-emerald-700 bg-emerald-50' },
+  { email: 'amlsanctionsreviewer@kyrobank.com', label: 'AML Sanctions Reviewer', role: 'AML_SANCTIONS_REVIEWER', badgeColor: 'border-amber-200 text-amber-700 bg-amber-50' },
+  { email: 'reconciliation@kyrobank.com', label: 'Reconciliation Officer', role: 'RECONCILIATION', badgeColor: 'border-cyan-200 text-cyan-700 bg-cyan-50' },
+  { email: 'bankauditor@kyrobank.com', label: 'Bank Auditor', role: 'BANK_AUDITOR', badgeColor: 'border-rose-200 text-rose-700 bg-rose-50' },
+  { email: 'corpchecker@kyrobank.com', label: 'Corporate Checker', role: 'CORP_CHECKER', badgeColor: 'border-indigo-200 text-indigo-700 bg-indigo-50' },
+  { email: 'corpmaker@kyrobank.com', label: 'Corporate Maker', role: 'CORP_MAKER', badgeColor: 'border-blue-200 text-blue-700 bg-blue-50' },
+  { email: 'customersupport@kyrobank.com', label: 'Customer Support Lead', role: 'CUSTOMER_SUPPORT', badgeColor: 'border-purple-200 text-purple-700 bg-purple-50' },
 ];
 
 export default function Login() {
@@ -194,12 +194,16 @@ export default function Login() {
                 onClick={async () => {
                   try {
                     setLoading(true);
-                    await login('superadmin@bank.com', 'password123');
+                    try {
+                      await login('admin@kyrobank.com', 'password123');
+                    } catch {
+                      await login('superadmin@bank.com', 'password123');
+                    }
                     localStorage.setItem('userType', 'bank_employee');
                     navigate('/dashboard');
                   } catch (err) {
                     setPersona('EMPLOYEE');
-                    handleDemoFill('superadmin@bank.com');
+                    handleDemoFill('admin@kyrobank.com');
                   } finally {
                     setLoading(false);
                   }
