@@ -105,15 +105,21 @@ export const UpiQrStandee: React.FC<UpiQrStandeeProps> = ({
         </div>
 
         {selectedIdType === 'custom' && (
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Enter Custom UPI ID</label>
+          <div className="space-y-1.5 animate-fade-in">
+            <div className="flex justify-between items-center">
+              <label className="block text-xs font-bold text-slate-500 uppercase">Real Bank UPI ID / Custom VPA</label>
+              <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">PhonePe / GPay Live</span>
+            </div>
             <input
               type="text"
               value={customHandle}
               onChange={(e) => setCustomHandle(e.target.value)}
-              placeholder="e.g. shopname@okkyro"
-              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. yourphone@ybl, yourname@okhdfcbank, or shop@paytm"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             />
+            <p className="text-[10px] text-blue-600 dark:text-blue-400">
+              💡 <strong>Test with real phone:</strong> Enter your real UPI ID above. Anyone scanning this QR Standee with PhonePe or GPay will send real money directly to your bank!
+            </p>
           </div>
         )}
 

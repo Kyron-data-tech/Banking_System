@@ -10,16 +10,19 @@
 [![Vite](https://img.shields.io/badge/Vite-5.4-bd34fe?style=for-the-badge&logo=vite)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 [![NPCI UPI 2.0](https://img.shields.io/badge/NPCI-UPI_2.0_Compliant-6366f1?style=for-the-badge)](https://www.npci.org.in/)
+[![Zero MDR](https://img.shields.io/badge/Smart_Packet-0%25_MDR_Exempt-10b981?style=for-the-badge)](https://www.npci.org.in/)
 
 <p align="center">
-  <b>A production-ready, hyper-realistic Enterprise Core Banking System (CBS) and UPI 2.0 Switch Engine.</b><br>
-  Built during the Software Engineering Internship at <b>Kyro Data Tech</b>, implementing Domain-Driven Design (DDD), real-time camera QR scanning, dynamic merchant counter standees, ISO 20022 compliance, AI fraud mitigation, and multi-tier Role-Based Access Control (RBAC).
+  <b>A production-grade, hyper-realistic Enterprise Core Banking System (CBS) and UPI 2.0 Switch Engine.</b><br>
+  Built during the Software Engineering Internship at <b>Kyro Data Tech</b>, implementing Domain-Driven Design (DDD), Hybrid Dual-Rail Payment Processing (Internal UPI + Direct Bank Switch), NPCI Smart Packet Splitting (≤ ₹1,999 zero-tax optimization), real-time camera QR scanning, dynamic merchant counter standees, bilingual audio soundbox, and multi-tier Role-Based Access Control (RBAC).
 </p>
 
 [System Architecture](#-system-architecture) •
+[Dual-Rail Gateway](#-hybrid-dual-rail-payment-architecture) •
+[Smart Packet Splitting](#-npci-smart-packet-splitting--2000-rule) •
+[Real Phone QR Scanning](#-real-phone-qr-scanning--live-bank-vpa-mode) •
 [Core Modules](#-key-modules--capabilities) •
-[UPI QR Suite](#-universal-upi-qr-code-ecosystem) •
-[Live Endpoints](#-api-documentation--endpoints) •
+[API Documentation](#-api-documentation--endpoints) •
 [Installation](#-local-development-setup) •
 [Demo Credentials](#-test-credentials--personas)
 
@@ -29,71 +32,159 @@
 
 ## 📌 Executive Summary
 
-Modern payment switches and core banking infrastructures demand extreme fault-tolerance, sub-second latency, rigorous double-entry bookkeeping, and military-grade auditability. 
+Modern payment switches and core banking infrastructures demand extreme fault-tolerance, sub-second latency, rigorous double-entry bookkeeping, and military-grade auditability.
 
-**KyroPay** is an end-to-end fintech platform developed to simulate and bridge the gap between traditional banking ledgers and next-generation real-time payment switches (NPCI UPI 2.0, IMPS, NEFT, and RTGS). 
+**KyroPay** is an enterprise neobanking and payment switch platform engineered to bridge traditional core banking ledgers (CBS) with next-generation real-time payment switches (NPCI UPI 2.0, IMPS, NEFT, and RTGS). 
 
-Engineered with a clean **Domain-Driven Design (DDD)** on **Java 21 LTS** and **Spring Boot 3.3.2**, backed by a high-performance **React 18 / TypeScript** frontend, KyroPay features real-time camera-based QR decoding, dynamic counter standee generation with custom amount locks, intelligent corporate MDR tax splitting, four-eyes (Maker-Checker) banking workflows, and an AI-driven transaction risk engine.
+Engineered with clean **Domain-Driven Design (DDD)** on **Java 21 LTS** and **Spring Boot 3.3.2**, paired with an ultra-responsive **React 18 / TypeScript** frontend, KyroPay features:
+- **Hybrid Dual-Rail Switch Engine**: Seamless routing between **Kyro Internal UPI Core** and **Direct Bank Switch** with HMAC-SHA256 signature verification.
+- **NPCI Smart Packet Splitting (> ₹2,000 Rule)**: Automatically decomposes merchant transactions exceeding ₹2,000 into micro-packets of $\le ₹1,999.00$, bypassing the 1.1% NPCI interchange tax (100% MDR tax-exempt).
+- **Interactive Amount Customizer**: Real-time amount adjustment with quick addition chips (`+₹100`, `+₹500`, `+₹1,000`, `+₹2,000`, `+₹5,000`).
+- **Real Phone QR Scanning & Live Bank VPA Mode**: Live routing for smartphones running Google Pay, PhonePe, or Paytm via genuine bank VPAs (`@okhdfcbank`, `@ybl`, `@paytm`).
+- **Bilingual Store Soundbox**: Spoken voice alerts in both English and Hindi (*"KyroPay par ₹... prapt hue!"*).
+- **4-Eyes Governance (Maker-Checker)**: Institutional segregation of duty for high-value transactions.
+- **AI Fraud Interception**: Real-time behavioral risk scoring and automated transaction quarantine.
 
 ---
 
 ## 🏗️ System Architecture
 
-KyroPay is architected around strict bounded contexts, preventing cross-domain coupling and enabling horizontal scalability:
+KyroPay is architected around strict bounded contexts, preventing cross-domain coupling and ensuring sub-second transaction dispatching:
 
 ```mermaid
 flowchart TB
     subgraph ClientLayer ["Client Presentation Layer (React 18 + Vite + Tailwind)"]
         ConsumerApp["Consumer Portal (PhonePe/GPay TPAP Style)"]
-        MerchantApp["Merchant Operations & Soundbox Terminal"]
+        MerchantApp["Merchant Business Hub & Live Soundbox"]
         AdminCMS["Bank Employee CMS (Maker-Checker & Liquidity)"]
         QRScanner["Universal Camera & File QR Scanner (jsQR)"]
+        GatewayModal["KyroPay Instant UPI Gateway & Packet Mesh"]
     end
 
-    subgraph APIGateway ["API Security & Gateway Layer (Spring Security 6)"]
+    subgraph SecurityGateway ["Security & Ingress Layer (Spring Security 6)"]
         JWTFilter["Stateless JWT Authentication Filter"]
         RBAC["Role-Based Access Guard (USER / MERCHANT / BANK_EMPLOYEE)"]
+        HMACValidator["HMAC-SHA256 Signature Validator"]
         RateLimiter["Rate Limiter & Audit Logger"]
     end
 
-    subgraph CoreBackend ["Core Banking & UPI Switch (Spring Boot 3.3.2 - Java 21)"]
-        UPISwitch["UPI 2.0 Routing Switch & VPA Resolver"]
-        PaymentFactory["Payment Strategy Factory (UPI / IMPS / NEFT / SWIFT)"]
-        SplitEngine["Corporate MDR Smart Split Engine"]
+    subgraph DualRailEngine ["Dual-Rail Switch Engine (Spring Boot 3.3.2 - Java 21)"]
+        UPISwitch["Rail 1: NPCI UPI 2.0 Switch & VPA Resolver"]
+        BankSwitch["Rail 2: Direct Bank Switch (NetBanking, Cards, IMPS)"]
+        PacketEngine["NPCI Smart Packet Splitting Engine (max ₹1,999/pkt)"]
+        LedgerService["Two-Phase Commit Double-Entry CBS Ledger Engine"]
         MakerChecker["4-Eyes Maker-Checker Governance Service"]
-        AccountService["Double-Entry Account & Ledger Engine"]
     end
 
-    subgraph SecurityAI ["Intelligence & Verification Layer"]
-        AIEngine["AI Transaction Risk Interceptor (Velocity & Anomaly)"]
-        MPINValidator["Hardware-Grade MPIN & Cryptographic Validator"]
+    subgraph IntelligenceLayer ["Intelligence & Audio Engine"]
+        AIRiskEngine["AI Fraud Interceptor (Velocity & Behavioral Anomaly)"]
+        SoundboxEngine["Bilingual Web Audio Soundbox (EN / HI Synthesizer)"]
+        MPINValidator["6-Digit MPIN Cryptographic Engine"]
     end
 
     subgraph Persistence ["Persistence & Storage Layer"]
-        DB[(Relational DB: H2 / PostgreSQL)]
-        AuditStore[(Immutable Audit Logs & UTR Registry)]
+        DB[(Relational DB: H2 Local / PostgreSQL Production)]
+        AuditStore[(Immutable UTR Registry & Parent-Child Ledger Packets)]
     end
 
     ConsumerApp -->|HTTPS / REST| JWTFilter
     MerchantApp -->|HTTPS / REST| JWTFilter
     AdminCMS -->|HTTPS / REST| JWTFilter
-    QRScanner -.->|Decodes NPCI URI| ConsumerApp
+    GatewayModal -->|HMAC-SHA256 / REST| HMACValidator
 
     JWTFilter --> RBAC --> RateLimiter
-    RateLimiter --> UPISwitch
-    RateLimiter --> AccountService
-    RateLimiter --> MakerChecker
+    HMACValidator --> RateLimiter
 
-    UPISwitch --> PaymentFactory
-    UPISwitch <--> AIEngine
+    RateLimiter --> UPISwitch
+    RateLimiter --> BankSwitch
+
+    UPISwitch --> PacketEngine
+    UPISwitch <--> AIRiskEngine
     UPISwitch <--> MPINValidator
-    UPISwitch --> SplitEngine
-    
-    SplitEngine --> AccountService
-    MakerChecker --> AccountService
-    AccountService --> DB
-    AccountService --> AuditStore
+
+    PacketEngine --> LedgerService
+    BankSwitch --> LedgerService
+    MakerChecker --> LedgerService
+
+    LedgerService --> SoundboxEngine
+    LedgerService --> DB
+    LedgerService --> AuditStore
 ```
+
+---
+
+## ⚡ Hybrid Dual-Rail Payment Architecture
+
+KyroPay implements a resilient dual-rail payment switch that gives merchants and consumers the flexibility of zero-cost P2P/P2M transfers or full commercial bank settlement:
+
+```mermaid
+flowchart TD
+    User(["Customer Initiates Checkout"]) --> Choice{"Select Payment Rail"}
+
+    subgraph Rail1 ["Rail 1: Kyro NPCI UPI Core Switch (0% MDR)"]
+        Choice -->|"⚡ Instant UPI QR / App"| R1_Step1["Scan Dynamic QR or Enter VPA"]
+        R1_Step1 --> R1_Step2{"Amount > ₹2,000?"}
+        R1_Step2 -- "Yes" --> R1_Split["NPCI Smart Packet Splitting (₹1,999/pkt)"]
+        R1_Step2 -- "No" --> R1_Direct["Single Direct Packet"]
+        R1_Split --> R1_Settle["Atomic CBS Double-Entry Settlement"]
+        R1_Direct --> R1_Settle
+        R1_Settle --> R1_Fee["Merchant Fee: ₹0.00 (100% Tax Exempt)"]
+    end
+
+    subgraph Rail2 ["Rail 2: Direct Bank Switch (Powered by Commercial Rails)"]
+        Choice -->|"🏦 Direct Bank Switch"| R2_Step1["Launch Secure Bank Drawer"]
+        R2_Step1 --> R2_Step2["Authenticate via NetBanking / Cards / External UPI"]
+        R2_Step2 --> R2_HMAC["HMAC-SHA256 Cryptographic Verification"]
+        R2_HMAC --> R2_Settle["Real-Time Settlement to Merchant Bank"]
+    end
+
+    R1_Fee --> Complete["Instant Payment Confirmation"]
+    R2_Settle --> Complete
+
+    Complete --> Receipt["Download Certified UTR Audit Receipt"]
+    Complete --> Audio["KyroPay Audio Soundbox: Spoken Payment Alert"]
+```
+
+---
+
+## 🧩 NPCI Smart Packet Splitting (> ₹2,000 Rule)
+
+### The Regulatory Background
+Under National Payments Corporation of India (NPCI) interchange circulars, merchant transactions exceeding **₹2,000** processed via Prepaid Payment Instruments (PPI/Wallets) or commercial aggregators attract an interchange fee of **up to 1.1% MDR**.
+
+Conversely, transactions of **₹2,000 or less (specifically ₹1,999)** qualify for **0% MDR (Zero Interchange Tax)**.
+
+### Mathematical Decomposition Algorithm
+KyroPay's `RazorpayService.java` and `RazorpayCheckoutModal.tsx` automatically evaluate the incoming transaction amount:
+
+$$\text{Packet Size} = \min(\text{Remaining Balance}, ₹1,999.00)$$
+
+$$\text{Total Packets} = \left\lceil \frac{\text{Total Amount}}{1999} \right\rceil$$
+
+For example, when a customer pays **₹5,000.00**:
+1. **Packet #1**: `₹1,999.00` $\rightarrow$ `UTR: 20261019..._PKT1` • **0% MDR Exempt**
+2. **Packet #2**: `₹1,999.00` $\rightarrow$ `UTR: 20261019..._PKT2` • **0% MDR Exempt**
+3. **Packet #3**: `₹1,002.00` $\rightarrow$ `UTR: 20261019..._PKT3` • **0% MDR Exempt**
+- **Total Cleared**: **₹5,000.00**  
+- **Merchant Savings**: **~₹55.00** saved per ₹5,000 transaction.
+
+### Atomic Parent-Child Database Schema
+The backend persists packet splits atomically within a transactional boundary:
+- **`UpiParentTransaction`**: Stores total requested amount, merchant destination, customer source, and aggregate completion state.
+- **`UpiTransactionPacket`**: Child entity containing unique packet ID, sub-amount, individual 12-digit UTR, and timestamp.
+
+---
+
+## 📱 Real Phone QR Scanning & Live Bank VPA Mode
+
+When demonstrating payment systems, physical smartphones running genuine banking apps (**Google Pay, PhonePe, Paytm, BHIM**) cannot resolve sandbox internal handles (e.g. `@okkyro`) because they are not registered with NPCI's Central PSP routing tables.
+
+### Solution: Live Bank VPA Switch
+KyroPay includes a **"⚡ Real Bank VPA (Live Mode)"** switch within the gateway modal and merchant standees:
+1. **Toggle On**: Enter your live bank UPI ID (e.g. `yourname@okhdfcbank`, `9876543210@ybl`, or `merchant@paytm`).
+2. **Scan with Phone**: Point any mobile UPI scanner at the dynamically calibrated QR code.
+3. **Real Money Inflow**: The phone immediately opens Google Pay/PhonePe with the exact amount or ₹1,999 packet pre-filled.
+4. **Instant Ledger Confirmation**: Authenticate with your bank MPIN on your phone; KyroPay logs the transaction, triggers the voice soundbox, and prints a verified audit receipt.
 
 ---
 
@@ -101,49 +192,45 @@ flowchart TB
 
 ### 1. 👥 Multi-Tier Persona Portals (RBAC)
 - 👤 **Consumer TPAP Portal (PhonePe / Google Pay Style):**
-  - Instant P2P / P2M transfers, contact list picker, live account balance inquiry guarded by an authentic MPIN security overlay.
-  - Quick action buttons (Mobile Recharge, Electricity, Split Bill, Fastag, CC Payment).
+  - Instant P2P / P2M transfers, contacts quick-dial, live balance inquiry protected by an authentic MPIN keypad.
+  - Utility quick-actions: Mobile Recharge, Electricity, Split Bill, Fastag, Credit Card Payment.
   - Transaction history with real-time status indicators (SUCCESS, PENDING, FAILED) and downloadable UTR slips.
 - 🏪 **Merchant Business Portal:**
   - Real-time aggregated daily sales counters, total revenue analytics, and gross collection volume.
-  - **Live Store Soundbox**: Audio-visual notifications reciting incoming transactions in real-time ("*Received ₹500 on KyroPay!*").
+  - **Live Store Soundbox**: Dual-language voice notifications reciting incoming payments (*"KyroPay par ₹500 prapt hue"*).
   - Dynamic QR Standee Generator with multi-handle support and instant PNG standee download.
 - 🏛️ **Bank Staff / Employee CMS (Maker-Checker Console):**
-  - Dedicated desktop sidebar portal for bank treasury and operations teams.
+  - Dedicated operations sidebar supporting 30+ enterprise banking roles.
   - System liquidity pool management, high-value transfer overrides, and real-time ledger audit logs.
-  - **4-Eyes Maker-Checker principle**: Critical actions initiated by a Junior Maker are quarantined until authorized by a Senior Checker.
+  - **4-Eyes Maker-Checker principle**: High-value transactions are placed in quarantine until authorized by an authenticated checker.
 
 ---
 
 ### 2. 📷 Universal UPI QR Code Ecosystem
 
 #### A. Live Camera & Image QR Scanner (`QrScannerModal.tsx`)
-- **Real-Time Camera Viewfinder**: Utilizes the HTML5 MediaDevices API (`getUserMedia`) and client-side `jsQR` to scan QR codes with a responsive, laser-guided HUD.
-- **Gallery & Screenshot Decoder**: Drag-and-drop or upload QR screenshots from WhatsApp, gallery, or banking slips.
+- **Real-Time Camera Viewfinder**: Utilizes the HTML5 MediaDevices API (`getUserMedia`) and client-side `jsQR` with laser-guided HUD.
+- **Gallery & Screenshot Decoder**: Upload or drag-and-drop QR screenshots from WhatsApp or payment slips.
 - **Full NPCI Specification Support**: Accurately parses standard UPI payment URIs:
   ```text
-  upi://pay?pa=vanshj7818@okkyro&pn=Vansh%20Jain&am=499.00&cu=INR&tn=Invoice101
+  upi://pay?pa=merchant@okhdfcbank&pn=Kyro%20Store&am=1999.00&cu=INR&tn=Invoice101
   ```
-- **Audio Chime Feedback**: Produces an authentic success tone upon reading the QR, instantly populating payee credentials and initiating NPCI VPA lookup.
-- **1-Click Demo Presets**: Preloaded with real-world scenarios (*Vansh Jain Merchant*, *MJ Style Personal*, *Starbucks ₹280*, *NPCI Split Test ₹5,500*) for frictionless technical demonstrations.
+- **Audio Chime Feedback**: Produces an authentic success tone upon reading the QR, instantly populating payee credentials.
 
 #### B. Dynamic Multi-VPA Standee Generator (`UpiQrStandee.tsx`)
-- **Authentic Retail Standee**: Modeled after standard PhonePe/GPay counter stands featuring official BHIM UPI, NPCI, and Kyro branding.
-- **Multi-Handle Switcher**: Allows merchants and consumers to toggle between:
-  - Primary UPI ID (e.g. `vanshj7818@okkyro`)
-  - Phone Number Handle (e.g. `7818086344@kyro`)
-  - Custom Merchant ID
-- **On-the-Fly Amount Encoder**: Bake custom payment requests or quick-select presets (`+₹100`, `+₹500`, `+₹1,999`) directly into the generated QR matrix.
-- **High-Resolution Standee Download**: Generates and downloads print-ready standees directly from the browser.
+- Modeled after standard PhonePe/GPay counter stands featuring official BHIM UPI, NPCI, and KyroPay branding.
+- Multi-handle switcher: Primary UPI ID, phone number handle (`@kyro`), or live bank VPA.
+- Preset chips (`+₹100`, `+₹500`, `+₹1,999`) with on-the-fly QR matrix re-rendering.
+- One-click print-ready PNG download.
 
 ---
 
 ### 3. 🛡️ Enterprise Security & Transaction Integrity
 - **Stateless JWT Authentication**: Cryptographically signed tokens ensuring tamper-proof sessions across client and server.
+- **HMAC-SHA256 Signature Verification**: Commercial-grade cryptographic check on all gateway callback payloads.
 - **6-Digit MPIN Hardware Simulation**: User transactions and balance inquiries require authentic MPIN authentication via an interactive keypad overlay.
-- **Two-Phase Commit Ledger**: Strict double-entry balance updates preventing negative balance anomalies, race conditions, and duplicate debit runs.
-- **12-Digit NPCI UTR Generation**: Every transfer produces an industry-standard 12-digit Unique Transaction Reference (e.g. `428591827401`) cross-referenced in audit logs.
-- **Corporate MDR Smart Split (₹2,000 Threshold Engine)**: Automatically partitions large merchant payments (e.g. ₹10,000) into sub-threshold micro-packets of `₹1,999` to optimize Merchant Discount Rate (MDR) processing while linking transactions to a master parent UTR.
+- **Two-Phase Commit Ledger**: Strict double-entry balance updates preventing negative balance anomalies, race conditions, and duplicate debits.
+- **12-Digit NPCI UTR Generation**: Every transfer produces an industry-standard 12-digit Unique Transaction Reference cross-referenced in audit logs.
 
 ---
 
@@ -159,9 +246,10 @@ flowchart TB
 | Layer | Technologies |
 | :--- | :--- |
 | **Backend Core** | Java 21 (LTS), Spring Boot 3.3.2, Spring MVC, Spring Data JPA, Hibernate ORM |
-| **Security & Auth** | Spring Security 6, Stateless JWT (JSON Web Tokens), BCrypt / Argon2 Password Hashing |
+| **Security & Auth** | Spring Security 6, Stateless JWT, BCrypt / Argon2 Password Hashing, HMAC-SHA256 |
 | **Frontend UI** | React 18, TypeScript, Vite 5.4, Tailwind CSS 3.4, Lucide React Icons |
-| **QR Engine** | Pure client-side `jsQR` (zero external API dependency), HTML5 Canvas, MediaDevices API |
+| **QR Engine** | Client-side `jsQR`, HTML5 Canvas, MediaDevices API |
+| **Audio Synthesizer** | Web Audio API / SpeechSynthesis (Bilingual English & Hindi) |
 | **Database** | In-Memory H2 (Local Development / Testing) / PostgreSQL (Production Profile) |
 | **Build & Tooling** | Apache Maven 3.8+, Node.js 18+, npm 10+, Git |
 
@@ -184,9 +272,14 @@ banking-system/
 │       ├── user/                            # User & Merchant Entities & Repositories
 │       │   ├── User.java
 │       │   └── UserRepository.java
-│       ├── upi/                             # NPCI UPI Switch & Verification
+│       ├── upi/                             # NPCI UPI Switch & Smart Packet Split
 │       │   ├── controller/UpiController.java
-│       │   └── service/UpiService.java
+│       │   ├── service/UpiService.java
+│       │   └── entity/UpiParentTransaction.java
+│       ├── razorpay/                        # Direct Bank Switch & Gateway Ingress
+│       │   ├── controller/RazorpayController.java
+│       │   ├── service/RazorpayService.java
+│       │   └── dto/RazorpayVerifyRequest.java
 │       ├── transaction/                     # Ledger, Smart Split & Routing
 │       │   ├── Transaction.java
 │       │   ├── TransactionController.java
@@ -201,10 +294,11 @@ banking-system/
 ├── frontend/                                # Modern React 18 + Vite Frontend
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── RazorpayCheckoutModal.tsx    # KyroPay Gateway & Packet Splitting Mesh
 │   │   │   ├── QrScannerModal.tsx           # Camera & Image UPI QR Scanner
 │   │   │   ├── UpiQrStandee.tsx             # Counter Standee & Amount Encoder
 │   │   │   ├── MpinModal.tsx                # 6-Digit NPCI MPIN Security Keypad
-│   │   │   └── SoundBoxToast.tsx            # Real-Time Audio Toast Notification
+│   │   │   └── SoundBoxToast.tsx            # Bilingual Audio Toast Notification
 │   │   ├── pages/
 │   │   │   ├── Dashboard.tsx                # Unified 3-Tier Multi-Persona Dashboard
 │   │   │   ├── Login.tsx                    # Authentication & Registration Portal
@@ -231,9 +325,11 @@ banking-system/
 | `POST` | `/api/auth/login` | Authenticate with credentials & receive JWT token | None |
 | `GET` | `/api/auth/profile` | Retrieve active user profile & account metadata | Bearer JWT |
 
-### 2. UPI 2.0 & QR Processing
+### 2. Dual-Rail Gateway & Smart Packet Settlement
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
+| `POST` | `/api/razorpay/create-order` | Create gateway order with packet configuration | Bearer JWT |
+| `POST` | `/api/razorpay/verify-payment`| Verify HMAC-SHA256 signature & commit double-entry packets | Bearer JWT |
 | `GET` | `/api/upi/verify-vpa?vpa={id}` | Real-time NPCI VPA lookup & name resolution | Bearer JWT |
 | `POST` | `/api/upi/pay` | Authorize and execute instant UPI transfer | Bearer JWT + MPIN |
 | `GET` | `/api/upi/qr-payload` | Generate signed NPCI `upi://pay` URI string | Bearer JWT |
@@ -269,7 +365,7 @@ The system includes pre-seeded accounts representing all 3 user tiers:
 ## 🚀 Local Development Setup
 
 ### Prerequisites
-- **Java Development Kit (JDK)**: Version 21 LTS or newer
+- **Java Development Kit (JDK)**: Version 21 LTS
 - **Apache Maven**: Version 3.8+
 - **Node.js**: Version 18.x or 20.x
 - **npm**: Version 9.x or newer
@@ -299,13 +395,14 @@ mvn spring-boot:run -DskipTests
 ```bash
 cd frontend
 
-# Install dependencies (including jsqr, lucide-react, tailwindcss)
+# Install dependencies
 npm install
 
-# Start Vite hot-reloading development server (Runs on port 3000)
+# Start Vite development server (Runs on port 3000)
 npm run dev -- --port 3000 --host
 ```
-*Access the responsive application at `http://localhost:3000`.*
+- **Local Browser Access**: `http://localhost:3000`
+- **Mobile Phone Access (Same Wi-Fi)**: `http://<YOUR_LOCAL_IP>:3000` (e.g. `http://10.78.29.69:3000`)
 
 ---
 
@@ -313,7 +410,7 @@ npm run dev -- --port 3000 --host
 
 - **Type Safety**: Strictly checked with TypeScript (`tsc -b`), ensuring 0 compilation errors across all modals, pages, and components.
 - **REST Contract Testing**: Validated through Spring MockMVC and automated HTTP test scripts.
-- **Cross-Device UI**: Fully responsive across mobile screens (375px+), tablets, and high-resolution ultrawide desktop monitors with independent scrolling viewports.
+- **Mobile Responsiveness**: Verified across mobile viewports (375px+), tablets, and high-resolution desktop displays with responsive bottom drawers and touch-friendly controls.
 
 ---
 

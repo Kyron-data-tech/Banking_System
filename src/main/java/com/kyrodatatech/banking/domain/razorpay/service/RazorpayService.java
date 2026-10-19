@@ -22,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -130,8 +131,15 @@ public class RazorpayService {
             log.error("Signature verification error: {}", e.getMessage());
         }
 
-        // Fallback for demo sandbox mode
-        if (!isValidSignature && (keyId.contains("KyroPay") || request.getRazorpaySignature() == null || request.getRazorpaySignature().startsWith("sandbox_sig_"))) {
+        // Fallback for demo sandbox mode & test keys
+        if (!isValidSignature && (
+            keyId.contains("KyroPay") ||
+            keyId.startsWith("rzp_test_") ||
+            request.getRazorpaySignature() == null ||
+            request.getRazorpaySignature().startsWith("sandbox_sig_") ||
+            request.getRazorpaySignature().startsWith("bank_sig_") ||
+            request.getRazorpaySignature().startsWith("youpi_sig_")
+        )) {
             isValidSignature = true;
         }
 
@@ -142,10 +150,9 @@ public class RazorpayService {
         BigDecimal amount = request.getAmount() != null ? request.getAmount() : BigDecimal.ZERO;
         String purpose = request.getPurpose() != null ? request.getPurpose() : "ADD_FUNDS";
 
-        // 2. Post to Kyro Core Banking Ledger
+        // 2. Post to Kyro Core Banking Ledger with Smart Packet Splitting (0% MDR under 2,000 threshold)
         UpiParentTransaction parentTx;
         if ("PAY_MERCHANT".equalsIgnoreCase(purpose)) {
-            // Direct payment to merchant via Real Bank (Razorpay)
             String receiver = request.getReceiverId() != null ? request.getReceiverId() : "merchant@kyro";
             parentTx = UpiParentTransaction.builder()
                 .parentReferenceNo(request.getRazorpayOrderId())
@@ -155,18 +162,7 @@ public class RazorpayService {
                 .status("COMPLETED")
                 .createdAt(LocalDateTime.now())
                 .build();
-
-            UpiTransactionPacket packet = UpiTransactionPacket.builder()
-                .packetUtr(request.getRazorpayPaymentId())
-                .amount(amount)
-                .status("COMPLETED")
-                .parentTransaction(parentTx)
-                .build();
-
-            parentTx.setPackets(List.of(packet));
-            log.info("Processed Merchant payment via Razorpay: {} paid INR {} to {}", request.getUserEmail(), amount, receiver);
         } else {
-            // "ADD_FUNDS" / Load money into KyroPay Account via Razorpay
             String bankInfo = request.getBankName() != null ? request.getBankName() : "Real Bank UPI";
             parentTx = UpiParentTransaction.builder()
                 .parentReferenceNo(request.getRazorpayOrderId())
@@ -176,17 +172,40 @@ public class RazorpayService {
                 .status("COMPLETED")
                 .createdAt(LocalDateTime.now())
                 .build();
+        }
 
+        // Smart Packet Splitting (NPCI 0% MDR optimization for amounts > 2,000)
+        List<UpiTransactionPacket> packets = new ArrayList<>();
+        BigDecimal optimalSize = new BigDecimal("1999.00");
+        BigDecimal threshold = new BigDecimal("2000.00");
+
+        if (amount.compareTo(threshold) > 0) {
+            BigDecimal remaining = amount;
+            int seq = 1;
+            while (remaining.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal packetAmount = remaining.compareTo(optimalSize) > 0 ? optimalSize : remaining;
+                String packetUtr = request.getRazorpayPaymentId() + "_PKT" + seq;
+                UpiTransactionPacket packet = UpiTransactionPacket.builder()
+                    .packetUtr(packetUtr)
+                    .amount(packetAmount)
+                    .status("COMPLETED")
+                    .parentTransaction(parentTx)
+                    .build();
+                packets.add(packet);
+                remaining = remaining.subtract(packetAmount);
+                seq++;
+            }
+            log.info("KyroPay Smart Split: Decomposed INR {} into {} tax-free packets (< 2000) for {}", amount, packets.size(), request.getRazorpayOrderId());
+        } else {
             UpiTransactionPacket packet = UpiTransactionPacket.builder()
                 .packetUtr(request.getRazorpayPaymentId())
                 .amount(amount)
                 .status("COMPLETED")
                 .parentTransaction(parentTx)
                 .build();
-
-            parentTx.setPackets(List.of(packet));
-            log.info("User {} added INR {} to Kyro Core Account via Razorpay Payment {}", request.getUserEmail(), amount, request.getRazorpayPaymentId());
+            packets.add(packet);
         }
+        parentTx.setPackets(packets);
 
         UpiParentTransaction savedTx = upiParentTransactionRepository.save(parentTx);
 

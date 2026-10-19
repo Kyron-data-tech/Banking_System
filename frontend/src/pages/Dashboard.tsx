@@ -23,7 +23,7 @@ import {
   TrendingUp, AlertTriangle, CheckCircle2,
   X, Plus, QrCode,
   Receipt, FileSpreadsheet, Building2, ArrowDownToLine,
-  Gift, Volume2, Smartphone, Send
+  Gift, Volume2, Smartphone, Send, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { upiApi } from '../api';
@@ -412,12 +412,12 @@ const SmartPayForm = ({
               <button 
                 type="button" 
                 onClick={() => onPayViaRazorpay(Number(amount) || 500, vpa || 'merchant@okkyro', verifiedName || vpa || 'Merchant Store')}
-                className="w-full py-4 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-black text-sm shadow-lg flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer border border-white/20"
-                title="Debit directly from your Real Bank Account via KyroPay Instant Bank Switch"
+                className="w-full py-4 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer border border-white/20"
+                title="Open KyroPay UPI Gateway & Real Bank Switch"
               >
-                <Building2 size={18} className="text-yellow-300" />
-                <span>⚡ Pay via Real Bank Account (UPI / NetBanking)</span>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ml-1">UPI / Cards</span>
+                <Sparkles size={18} className="text-yellow-300 animate-pulse" />
+                <span>⚡ Pay via KyroPay Instant Gateway (Dynamic QR & UPI Apps)</span>
+                <span className="text-[10px] bg-emerald-400 text-slate-900 px-2 py-0.5 rounded-full font-black ml-1 uppercase">0% Fee</span>
               </button>
             )}
 
