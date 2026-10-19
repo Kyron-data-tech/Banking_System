@@ -717,7 +717,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                     </div>
 
                     <p className="text-[11px] text-blue-800 dark:text-blue-300 leading-tight">
-                      Transactions above ₹2,000 normally incur a 1.1% interchange tax. KyroPay automatically divides <strong>₹{amount.toLocaleString('en-IN')}</strong> into <strong>{activePackets.length} micro-packets of &le; ₹1,999</strong> so the entire transfer remains 100% free!
+                      <strong>⚡ 1-Go Smart Settlement:</strong> Scan the QR below once to pay <strong>₹{amount.toLocaleString('en-IN')} in one go</strong>. KyroPay&apos;s Switch engine automatically fragments the transaction into <strong>{activePackets.length} tax-exempt micro-packets (&le; ₹1,999)</strong> in one shot in the core banking ledger!
                     </p>
 
                     {/* Interactive Packet Selector Tabs */}
@@ -731,7 +731,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                         }`}
                       >
-                        ⚡ Full Transfer (₹{amount})
+                        ⚡ Pay in 1-Go (₹{amount.toLocaleString('en-IN')})
                       </button>
 
                       {activePackets.map((pkt, i) => (
