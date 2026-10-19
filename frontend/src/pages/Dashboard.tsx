@@ -93,6 +93,11 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
                   ⚡ Real Bank
                 </span>
               )}
+              {tx.packets && tx.packets.length > 1 && (
+                <span className="text-[10px] bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
+                  <span>🛡️</span> {tx.packets.length} Packets (0% MDR)
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 max-w-[150px] truncate">
               {isOut ? tx.receiverId : tx.senderId}
@@ -124,18 +129,38 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
       {expanded && (
         <div className="bg-slate-50 p-4 border-t border-slate-100 space-y-3">
           {tx.packets && tx.packets.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Bot size={15} className="text-blue-600"/>
-                <p className="text-xs font-bold text-blue-900">
-                  {isSettlement ? 'Settlement UTR Reference' : `NPCI Packets (${tx.packets.length})`}
-                </p>
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Bot size={15} className="text-blue-600"/>
+                  <p className="text-xs font-bold text-slate-800">
+                    {isSettlement ? 'Settlement UTR Reference' : `NPCI Smart Split Packets (${tx.packets.length})`}
+                  </p>
+                </div>
+                {tx.packets.length > 1 && (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-md border border-emerald-200">
+                    0% MDR Tax Exempt
+                  </span>
+                )}
               </div>
-              <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar pr-2">
+              {tx.packets.length > 1 && (
+                <div className="text-[11px] text-emerald-800 bg-emerald-50/80 p-2.5 rounded-xl mb-2.5 border border-emerald-200/80 leading-relaxed">
+                  💡 <b>NPCI Smart Packet Engine:</b> Total amount of <b>₹{Number(tx.totalAmount).toLocaleString('en-IN')}</b> was automatically decomposed into <b>{tx.packets.length} micro-packets</b> of max ₹1,999 to bypass the 1.1% merchant interchange fee (saving ~₹{Math.round(Number(tx.totalAmount) * 0.011)} in MDR taxes).
+                </div>
+              )}
+              <div className="space-y-1.5 max-h-48 overflow-y-auto no-scrollbar pr-1">
                 {tx.packets.map((p: any, i: number) => (
-                  <div key={i} className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-200/80 shadow-sm text-xs">
-                    <span className="font-mono text-slate-500 font-medium">UTR: {p.packetUtr}</span>
-                    <span className="font-extrabold text-slate-800">₹{p.amount}</span>
+                  <div key={i} className="flex justify-between items-center bg-slate-50 hover:bg-blue-50/40 transition p-2.5 rounded-xl border border-slate-200/80 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black flex items-center justify-center shrink-0">
+                        #{i + 1}
+                      </span>
+                      <span className="font-mono text-slate-600 font-semibold text-[11px]">UTR: {p.packetUtr}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-emerald-700 font-extrabold bg-emerald-100/70 border border-emerald-200 px-1.5 py-0.5 rounded">0% FEE</span>
+                      <span className="font-black text-slate-900 text-xs">₹{p.amount}</span>
+                    </div>
                   </div>
                 ))}
               </div>
