@@ -23,7 +23,7 @@ import {
   TrendingUp, AlertTriangle, CheckCircle2,
   X, Plus, QrCode,
   Receipt, FileSpreadsheet, Building2, ArrowDownToLine,
-  Gift, Volume2, Smartphone, Send, Sparkles, ExternalLink
+  Gift, Volume2, Smartphone, Send, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { upiApi } from '../api';
@@ -615,46 +615,6 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
               <FileSpreadsheet size={18} /> <span className="font-medium text-xs">Account Statement</span>
             </div>
           )}
-          
-          {/* Live External Gateway: YouPI PG Live Service */}
-          <div className="mt-2 pt-2 border-t border-slate-700/60">
-            <p className="text-[10px] uppercase font-bold text-slate-400 px-2 mb-1.5 tracking-wider flex items-center justify-between">
-              <span>YouPI PG Engine</span>
-              <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.2 rounded font-mono font-bold">ONLINE</span>
-            </p>
-            <div className="flex flex-col gap-1">
-              <a 
-                href="http://localhost:5000" 
-                target="_blank" 
-                rel="noreferrer"
-                className="flex items-center justify-between p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px] font-bold border border-slate-700"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
-                  <span className="truncate">Showcase Store</span>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono shrink-0">
-                  <span>:5000</span>
-                  <ExternalLink size={10} />
-                </div>
-              </a>
-              <a 
-                href="http://localhost:6001" 
-                target="_blank" 
-                rel="noreferrer"
-                className="flex items-center justify-between p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px] font-bold border border-slate-700"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0"></span>
-                  <span className="truncate">Merchant Hub</span>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono shrink-0">
-                  <span>:6001</span>
-                  <ExternalLink size={10} />
-                </div>
-              </a>
-            </div>
-          </div>
 
           <div className="mt-auto pt-4">
              <div className="flex items-center justify-between p-3 bg-slate-900/60 rounded-2xl border border-slate-700/60">
