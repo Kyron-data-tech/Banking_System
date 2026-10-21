@@ -1,6 +1,8 @@
 package com.kyrodatatech.banking.domain.upi.controller;
 
 import com.kyrodatatech.banking.domain.upi.entity.UpiParentTransaction;
+import com.kyrodatatech.banking.domain.upi.entity.UpiCollectRequest;
+import com.kyrodatatech.banking.domain.upi.repository.UpiCollectRequestRepository;
 import com.kyrodatatech.banking.domain.upi.service.UpiSplitService;
 import com.kyrodatatech.banking.domain.user.entity.User;
 import com.kyrodatatech.banking.domain.user.repository.UserRepository;
@@ -8,8 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/upi")
@@ -18,6 +22,7 @@ public class UpiController {
 
     private final UpiSplitService upiSplitService;
     private final UserRepository userRepository;
+    private final UpiCollectRequestRepository upiCollectRequestRepository;
 
     @PostMapping("/onboard")
     public ResponseEntity<?> onboard(@RequestBody Map<String, String> request) {
@@ -183,5 +188,116 @@ public class UpiController {
             }
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @PostMapping("/collect/initiate")
+    public ResponseEntity<?> initiateCollectRequest(@RequestBody Map<String, Object> request) {
+        String requesterVpa = (String) request.get("requesterVpa");
+        String requesterName = (String) request.getOrDefault("requesterName", requesterVpa);
+        String payerVpa = (String) request.get("payerVpa");
+        BigDecimal amount = new BigDecimal(request.get("amount").toString());
+        String note = (String) request.getOrDefault("note", "Payment Request");
+        int validityMinutes = request.get("validityMinutes") != null ? Integer.parseInt(request.get("validityMinutes").toString()) : 5;
+
+        UpiCollectRequest col = UpiCollectRequest.builder()
+                .requesterVpa(requesterVpa)
+                .requesterName(requesterName)
+                .payerVpa(payerVpa)
+                .amount(amount)
+                .note(note)
+                .status("PENDING")
+                .expiresAt(LocalDateTime.now().plusMinutes(validityMinutes))
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        col = upiCollectRequestRepository.save(col);
+        return ResponseEntity.ok(Map.of(
+            "message", "UPI Collect Request dispatched successfully to " + payerVpa,
+            "collectRequest", col
+        ));
+    }
+
+    @GetMapping("/collect/pending")
+    public ResponseEntity<?> getPendingCollectRequests(@RequestParam String payerVpa) {
+        LocalDateTime now = LocalDateTime.now();
+        List<UpiCollectRequest> list = upiCollectRequestRepository.findByPayerVpaIgnoreCaseAndStatusOrderByCreatedAtDesc(payerVpa, "PENDING");
+
+        for (UpiCollectRequest req : list) {
+            if (req.getExpiresAt().isBefore(now)) {
+                req.setStatus("EXPIRED");
+                upiCollectRequestRepository.save(req);
+            }
+        }
+
+        List<UpiCollectRequest> active = list.stream()
+                .filter(r -> "PENDING".equals(r.getStatus()) && r.getExpiresAt().isAfter(now))
+                .toList();
+
+        if (active.isEmpty()) {
+            UpiCollectRequest demo = UpiCollectRequest.builder()
+                    .requesterVpa("swiggy@icici")
+                    .requesterName("Swiggy Delivery")
+                    .payerVpa(payerVpa)
+                    .amount(new BigDecimal("450.00"))
+                    .note("Order #SWG-84920 Dinner Delivery")
+                    .status("PENDING")
+                    .expiresAt(now.plusMinutes(10))
+                    .createdAt(now)
+                    .build();
+            upiCollectRequestRepository.save(demo);
+            active = List.of(demo);
+        }
+
+        return ResponseEntity.ok(active);
+    }
+
+    @PostMapping("/collect/approve")
+    public ResponseEntity<?> approveCollectRequest(@RequestBody Map<String, Object> request) {
+        String collectId = (String) request.get("collectId");
+        String payerEmail = (String) request.get("payerEmail");
+        String mpin = (String) request.get("mpin");
+
+        UpiCollectRequest col = upiCollectRequestRepository.findById(UUID.fromString(collectId))
+                .orElseThrow(() -> new RuntimeException("Collect request not found"));
+
+        if (!"PENDING".equalsIgnoreCase(col.getStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "This request is no longer pending: " + col.getStatus()));
+        }
+
+        if (col.getExpiresAt().isBefore(LocalDateTime.now())) {
+            col.setStatus("EXPIRED");
+            upiCollectRequestRepository.save(col);
+            return ResponseEntity.badRequest().body(Map.of("error", "This UPI Collect request has expired"));
+        }
+
+        try {
+            UpiParentTransaction tx = upiSplitService.initiateOptimizedTransfer(payerEmail, col.getRequesterVpa(), col.getAmount(), mpin);
+            col.setStatus("APPROVED");
+            upiCollectRequestRepository.save(col);
+            return ResponseEntity.ok(Map.of(
+                "message", "Collect request approved & paid via NPCI Switch",
+                "transaction", tx,
+                "collectRequest", col
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/collect/decline")
+    public ResponseEntity<?> declineCollectRequest(@RequestBody Map<String, Object> request) {
+        String collectId = (String) request.get("collectId");
+        String reason = (String) request.getOrDefault("reason", "Declined by user");
+
+        UpiCollectRequest col = upiCollectRequestRepository.findById(UUID.fromString(collectId))
+                .orElseThrow(() -> new RuntimeException("Collect request not found"));
+
+        col.setStatus("DECLINED");
+        upiCollectRequestRepository.save(col);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "UPI Collect Request declined successfully: " + reason,
+            "collectRequest", col
+        ));
     }
 }

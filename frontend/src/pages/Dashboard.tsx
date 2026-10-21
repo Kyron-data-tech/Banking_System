@@ -17,13 +17,14 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { BankEmployeePortal } from '../components/BankEmployeePortal';
 import { NpciCommonLibraryModal } from '../components/NpciCommonLibraryModal';
 import { DeviceBindingModal } from '../components/DeviceBindingModal';
+import { UpiCollectModal } from '../components/UpiCollectModal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
   Camera, Users, CreditCard, ShieldCheck, Activity,
   LogOut, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
-  X, Plus, QrCode,
+  X, Plus, QrCode, Bell,
   Receipt, FileSpreadsheet, Building2, ArrowDownToLine,
   Gift, Volume2, Smartphone, Send, Sparkles
 } from 'lucide-react';
@@ -57,38 +58,38 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
   const isRazorpay = tx.parentReferenceNo?.startsWith('order_') || tx.senderId?.includes('Real Bank') || tx.packets?.some((p: any) => p.packetUtr?.startsWith('pay_'));
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 mb-3 overflow-hidden transition hover:shadow-md">
-      <div className="p-4 cursor-pointer hover:bg-slate-50/80 transition flex justify-between items-center" onClick={() => setExpanded(!expanded)}>
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200/90 dark:border-slate-700 mb-3 overflow-hidden transition hover:shadow-md">
+      <div className="p-4 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition flex justify-between items-center" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
             isSettlement 
-              ? 'bg-purple-100 text-purple-700' 
+              ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300' 
               : isOut 
-              ? 'bg-orange-100 text-orange-600' 
-              : 'bg-emerald-100 text-emerald-600'
+              ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400' 
+              : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
           }`}>
             {isSettlement ? <Building2 size={20} /> : <Activity size={20} />}
           </div>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="font-extrabold text-sm text-slate-800">
+              <p className="font-extrabold text-sm text-slate-800 dark:text-white">
                 {isSettlement ? 'Bank Settlement' : isOut ? 'Paid to' : 'Received from'}
               </p>
               {isRazorpay && (
-                <span className="text-[10px] bg-indigo-50 border border-indigo-200 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-bold">
                   ⚡ Real Bank
                 </span>
               )}
               {tx.packets && tx.packets.length > 1 && (
-                <span className="text-[10px] bg-emerald-50 border border-emerald-300 text-emerald-700 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
+                <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 shadow-xs">
                   <span>🛡️</span> {tx.packets.length} Packets (0% MDR)
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 max-w-[150px] truncate">
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[150px] truncate">
               {isOut ? tx.receiverId : tx.senderId}
             </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
               {tx.createdAt ? new Date(tx.createdAt).toLocaleString('en-IN') : 'Just now'}
             </p>
           </div>
@@ -97,14 +98,14 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
           <div>
             <p className={`font-black text-sm md:text-base ${
               isSettlement 
-                ? 'text-purple-700' 
+                ? 'text-purple-700 dark:text-purple-400' 
                 : isOut 
-                ? 'text-slate-900' 
-                : 'text-emerald-600'
+                ? 'text-slate-900 dark:text-white' 
+                : 'text-emerald-600 dark:text-emerald-400'
             }`}>
               {isOut ? '-' : '+'}₹{Number(tx.totalAmount).toLocaleString('en-IN')}
             </p>
-            <p className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full inline-block">
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full inline-block border border-emerald-200 dark:border-emerald-800">
               {tx.status}
             </p>
           </div>
@@ -113,9 +114,9 @@ const TransactionItem = ({ tx, onViewReceipt }: { tx: any; onViewReceipt?: (tx: 
       </div>
       
       {expanded && (
-        <div className="bg-slate-50 p-4 border-t border-slate-100 space-y-3">
+        <div className="bg-slate-50 dark:bg-slate-900/60 p-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
           {tx.packets && tx.packets.length > 0 && (
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Bot size={15} className="text-blue-600"/>
@@ -363,14 +364,14 @@ const SmartPayForm = ({
         <form onSubmit={handlePayClick} className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-slate-500 uppercase">To UPI ID / Number</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">To UPI ID / Number</label>
               <div className="flex items-center gap-1">
                 {['consumer@okkyro', 'merchant@okkyro'].map(testVpa => (
                   <button
                     key={testVpa}
                     type="button"
                     onClick={() => { setVpa(testVpa); setVerifiedName(testVpa.split('@')[0]); }}
-                    className="text-[10px] bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 font-semibold px-1.5 py-0.5 rounded border border-slate-200 transition"
+                    className="text-[10px] bg-slate-100 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 text-slate-600 dark:text-slate-300 font-semibold px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 transition"
                   >
                     {testVpa.split('@')[0]}
                   </button>
@@ -378,35 +379,47 @@ const SmartPayForm = ({
               </div>
             </div>
             <div className="flex gap-2">
-                <input required value={vpa} onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} placeholder="name@okkyro or mobile@upi" 
-  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-medium" />
+                <input 
+                  required 
+                  value={vpa} 
+                  onChange={e => {setVpa(e.target.value); setVerifiedName(null);}} 
+                  placeholder="name@okkyro or mobile@upi" 
+                  className="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl text-sm outline-none font-medium focus:ring-2 focus:ring-blue-500 transition-colors" 
+                />
                 {onOpenScanner && (
-                  <button type="button" onClick={onOpenScanner} title="Scan QR Code" className="px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition border border-blue-200 flex items-center justify-center">
+                  <button type="button" onClick={onOpenScanner} title="Scan QR Code" className="px-3 bg-blue-50 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 text-blue-600 dark:text-blue-400 rounded-xl transition border border-blue-200 dark:border-slate-700 flex items-center justify-center">
                     <QrCode size={18} />
                   </button>
                 )}
-                <button type="button" onClick={handleVerify} disabled={verifying} className="px-4 bg-slate-200 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-300 transition-colors">{verifying ? '...' : 'Verify'}</button>
+                <button type="button" onClick={handleVerify} disabled={verifying} className="px-4 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">{verifying ? '...' : 'Verify'}</button>
             </div>
-            {verifiedName && <p className="text-xs text-emerald-600 font-bold mt-1 flex items-center gap-1"><CheckCircle2 size={14}/> {verifiedName}</p>}
+            {verifiedName && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-1 flex items-center gap-1"><CheckCircle2 size={14}/> {verifiedName}</p>}
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-slate-500 uppercase">Amount (₹)</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Amount (₹)</label>
               <div className="flex items-center gap-1">
                 {[100, 500, 1000].map(val => (
                   <button
                     key={val}
                     type="button"
                     onClick={() => setAmount(String(val))}
-                    className="text-[10px] bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 font-bold px-2 py-0.5 rounded border border-slate-200 transition"
+                    className="text-[10px] bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:text-emerald-700 dark:hover:text-emerald-400 text-slate-600 dark:text-slate-300 font-bold px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 transition"
                   >
                     ₹{val}
                   </button>
                 ))}
               </div>
             </div>
-            <input required type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} 
-  placeholder="0.00" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-bold outline-none" />
+            <input 
+              required 
+              type="number" 
+              min="1" 
+              value={amount} 
+              onChange={e => setAmount(e.target.value)} 
+              placeholder="0.00" 
+              className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 rounded-xl text-lg font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-colors" 
+            />
 
             {/* Insufficient Balance Error Notice */}
             {isInsufficient && (
@@ -488,7 +501,7 @@ const SmartPayForm = ({
     );
 };
 
-const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab, onOpenScanner }: any) => {
+const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab, onOpenScanner, onOpenCollect }: any) => {
   const { logout, user: backendUser } = useAuth();
   const { user: clerkUser } = useUser();
   const isMerchant = Boolean(title?.toLowerCase().includes('business') || title?.toLowerCase().includes('merchant'));
@@ -569,6 +582,10 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             <Users size={18} /> <span className="font-medium text-xs">Verified Contacts</span>
           </div>
 
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/10 text-amber-400 hover:text-amber-300 font-bold`} onClick={() => onOpenCollect ? onOpenCollect() : setActiveTab('pay')}>
+            <Bell size={18} className="animate-pulse" /> <span className="font-medium text-xs">UPI Collect Demands</span>
+          </div>
+
           <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all ${activeTab === 'banks' ? 'bg-blue-600 text-white font-bold shadow-md' : 'hover:bg-white/10 text-slate-300 hover:text-white'}`} onClick={() => setActiveTab('banks')}>
             <Building2 size={18} /> <span className="font-medium text-xs">Bank Accounts & Balance</span>
           </div>
@@ -610,8 +627,113 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
       </div>
       
       {/* MAIN CONTENT AREA */}
-      <div className="p-4 pt-4 md:p-8 flex-1 overflow-y-auto no-scrollbar bg-slate-50/60 dark:bg-slate-950/60 relative transition-colors">
+      <div className="p-4 pt-3 md:p-8 flex-1 overflow-y-auto no-scrollbar bg-slate-50/60 dark:bg-slate-950/60 relative transition-colors">
         <div className="max-w-2xl mx-auto">
+          {/* MOBILE QUICK-SERVICES HORIZONTAL SCROLL STRIP (100% FEATURE PARITY WITH DESKTOP) */}
+          <div className="md:hidden flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-3 pt-0.5 border-b border-slate-200/70 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setActiveTab('pay')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                activeTab === 'pay' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Activity size={13} />
+              <span>Pay</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                activeTab === 'history' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <HistoryIcon size={13} />
+              <span>History</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenCollect ? onOpenCollect() : setActiveTab('pay')}
+              className="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+            >
+              <Bell size={13} className="animate-pulse" />
+              <span>Collect Requests</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('banks')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                activeTab === 'banks' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Building2 size={13} />
+              <span>Bank A/Cs</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('rewards')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                activeTab === 'rewards' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Gift size={13} className="text-amber-500" />
+              <span>Rewards</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('soundbox')}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                activeTab === 'soundbox' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+              }`}
+            >
+              <Volume2 size={13} className="text-emerald-500" />
+              <span>Soundbox</span>
+            </button>
+
+            {isMerchant ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab('developer')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                  activeTab === 'developer' 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <ShieldCheck size={13} />
+                <span>API Keys</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveTab('statement')}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 ${
+                  activeTab === 'statement' 
+                    ? 'bg-blue-600 text-white shadow-sm' 
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                <FileSpreadsheet size={13} />
+                <span>Statement</span>
+              </button>
+            )}
+          </div>
+
           {children}
         </div>
       </div>
@@ -644,16 +766,16 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             </span>
           </div>
 
-          {/* TAB 4: MY QR CODE */}
+          {/* TAB 4: COLLECT REQUESTS */}
+          <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => onOpenCollect ? onOpenCollect() : setActiveTab('pay')}>
+            <Bell size={20} className="text-amber-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-amber-500">Collect</span>
+          </div>
+
+          {/* TAB 5: MY QR CODE */}
           <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('my-qr')}>
             <QrCode size={20} className={activeTab === 'my-qr' ? 'text-blue-600' : 'text-slate-400'} />
             <span className={`text-[10px] font-bold ${activeTab === 'my-qr' ? 'text-blue-600' : 'text-slate-500'}`}>My QR</span>
-          </div>
-
-          {/* TAB 5: CONTACTS */}
-          <div className="flex flex-col items-center gap-0.5 cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 py-1 min-w-[50px]" onClick={() => setActiveTab('contact')}>
-            <Users size={20} className={activeTab === 'contact' ? 'text-blue-600' : 'text-slate-400'} />
-            <span className={`text-[10px] font-bold ${activeTab === 'contact' ? 'text-blue-600' : 'text-slate-500'}`}>Contacts</span>
           </div>
         </div>
       </div>
@@ -682,6 +804,8 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
     const [showDeviceBinding, setShowDeviceBinding] = useState<boolean>(false);
     const [showSecurityKeypadDemo, setShowSecurityKeypadDemo] = useState<boolean>(false);
     const [upiLiteBalance, setUpiLiteBalance] = useState<number>(1850);
+    const [showCollectModal, setShowCollectModal] = useState<boolean>(false);
+    const [pendingCollectDemands, setPendingCollectDemands] = useState<any[]>([]);
 
   const { user } = useUser();
   const { user: backendUser } = useAuth();
@@ -768,9 +892,25 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
       });
     };
 
+    const fetchCollectRequests = () => {
+      const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'normal@kyro';
+      const upiId = verifiedUpiId || (email.split('@')[0] + '@okkyro');
+      upiApi.getPendingCollect(upiId)
+        .then(res => {
+          if (Array.isArray(res.data)) {
+            setPendingCollectDemands(res.data);
+          }
+        })
+        .catch(() => {});
+    };
+
     useEffect(() => {
       fetchHistory();
-      const interval = setInterval(fetchHistory, 3000);
+      fetchCollectRequests();
+      const interval = setInterval(() => {
+        fetchHistory();
+        fetchCollectRequests();
+      }, 3000);
       return () => clearInterval(interval);
     }, [refresh, user, backendUser, activeTab, verifiedUpiId]);
 
@@ -781,6 +921,7 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
       activeTab={activeTab} 
       setActiveTab={setActiveTab}
       onOpenScanner={() => setShowScanner(true)}
+      onOpenCollect={() => setShowCollectModal(true)}
     >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
@@ -810,6 +951,43 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
               <span>Verified SIM</span>
             </div>
           </div>
+
+          {/* NPCI UPI 2.0 PULL PAYMENT / INCOMING COLLECT DEMANDS BANNER */}
+          {pendingCollectDemands.length > 0 && (
+            <div 
+              onClick={() => setShowCollectModal(true)}
+              className="mb-4 bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/50 dark:border-amber-400/40 rounded-2xl p-3.5 text-slate-800 dark:text-white flex items-center justify-between shadow-md cursor-pointer transition active:scale-[0.99] group hover:border-amber-500"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm group-hover:scale-105 transition">
+                  <Bell size={18} className="animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Payment Demand Pending ({pendingCollectDemands.length})
+                    </span>
+                    <span className="text-[9px] bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-bold px-1.5 py-0.2 rounded-full border border-red-200 dark:border-red-800">
+                      NPCI UPI 2.0 Pull
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold mt-0.5 text-slate-800 dark:text-slate-100">
+                    {pendingCollectDemands[0].requesterName || pendingCollectDemands[0].requesterVpa} requested ₹{Number(pendingCollectDemands[0].amount).toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCollectModal(true);
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black rounded-xl shadow-sm hover:brightness-105 transition active:scale-95"
+              >
+                Review & Pay
+              </button>
+            </div>
+          )}
 
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl mb-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
@@ -1103,21 +1281,21 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
           </div>
 
           {/* LINKED COMMERCIAL BANK ACCOUNTS (NPCI VERIFIED) */}
-          <div className="bg-white rounded-3xl p-5 mb-6 border border-slate-200 shadow-md">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-5 mb-6 border border-slate-200 dark:border-slate-700 shadow-md transition-colors">
             <div className="flex items-center justify-between mb-3.5">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                   <Building2 size={18} />
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-xs text-slate-800">Linked Commercial Bank Accounts</h4>
+                  <h4 className="font-extrabold text-xs text-slate-800 dark:text-white">Linked Commercial Bank Accounts</h4>
                   <p className="text-[10px] text-slate-400 font-medium">NPCI Mandate & IMPS Verified Sources</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowLinkBankModal(true)}
-                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer active:scale-95 border border-blue-100"
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 bg-blue-50 dark:bg-slate-700 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer active:scale-95 border border-blue-100 dark:border-slate-600"
               >
                 <Plus size={14} /> Link Bank
               </button>
@@ -1127,22 +1305,22 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
               {linkedBanks.map((b) => (
                 <div
                   key={b.id}
-                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between hover:border-blue-300 transition"
+                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-700/50 border border-slate-200/80 dark:border-slate-600 flex items-center justify-between hover:border-blue-300 dark:hover:border-blue-400 transition"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-bold text-slate-700 text-xs shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 flex items-center justify-center font-bold text-slate-700 text-xs shadow-sm">
                       🏛️
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-extrabold text-xs text-slate-800">{b.bankName}</span>
+                        <span className="font-extrabold text-xs text-slate-800 dark:text-white">{b.bankName}</span>
                         {b.isPrimary && (
-                          <span className="text-[9px] bg-emerald-100 text-emerald-700 font-extrabold px-1.5 py-0.5 rounded-md">
+                          <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold px-1.5 py-0.5 rounded-md border border-emerald-300 dark:border-emerald-800">
                             PRIMARY
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] font-mono text-slate-500 font-medium">
+                      <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 font-medium">
                         {b.accountNumber} • {b.ifsc}
                       </p>
                     </div>
@@ -1156,8 +1334,8 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
-            <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800/90 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-md transition-colors">
+            <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm flex items-center gap-2">
                <Activity size={16} className="text-blue-600" /> Send Money Instantly
             </h3>
 
@@ -1354,6 +1532,21 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
         bankName="HDFC Bank"
         accountNumber="•••• 4129"
       />
+
+      {/* NPCI UPI 2.0 Collect Demands Modal */}
+      <UpiCollectModal
+        isOpen={showCollectModal}
+        onClose={() => setShowCollectModal(false)}
+        userVpa={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'user').split('@')[0] + '@okkyro'}
+        userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'user@kyro'}
+        onPaymentSuccess={(createdTx) => {
+          setRefresh(r => r + 1);
+          if (createdTx) {
+            setActiveReceipt(createdTx);
+            playKyroPaySoundbox(createdTx.totalAmount, 'hi');
+          }
+        }}
+      />
     </MobileDashboardLayout>
   );
 };
@@ -1375,6 +1568,7 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
     const [razorpayAmount, setRazorpayAmount] = useState<number>(500);
     const [showDeviceBinding, setShowDeviceBinding] = useState<boolean>(false);
     const [showSecurityKeypadDemo, setShowSecurityKeypadDemo] = useState<boolean>(false);
+    const [showCollectModal, setShowCollectModal] = useState<boolean>(false);
 
     const { user } = useUser();
     const { user: backendUser } = useAuth();
@@ -1473,6 +1667,7 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
         onOpenScanner={() => setShowScanner(true)}
+        onOpenCollect={() => setShowCollectModal(true)}
       >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
@@ -1648,8 +1843,8 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
               isLoading={checkingBalance}
             />
 
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
-              <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-800/90 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-md transition-colors">
+              <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-sm flex items-center gap-2">
                  <Layers size={16} className="text-indigo-600" /> Vendor Payouts (Smart Split)
             </h3>
 
@@ -1914,6 +2109,21 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         userEmail={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'}
         bankName="HDFC Bank"
         accountNumber="•••• 8821"
+      />
+
+      {/* NPCI UPI 2.0 Collect Demands Modal (Merchant) */}
+      <UpiCollectModal
+        isOpen={showCollectModal}
+        onClose={() => setShowCollectModal(false)}
+        userVpa={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant').split('@')[0] + '@okkyro'}
+        userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyro'}
+        onPaymentSuccess={(createdTx) => {
+          setRefresh(r => r + 1);
+          if (createdTx) {
+            setActiveReceipt(createdTx);
+            playKyroPaySoundbox(createdTx.totalAmount, 'hi');
+          }
+        }}
       />
     </MobileDashboardLayout>
     </>

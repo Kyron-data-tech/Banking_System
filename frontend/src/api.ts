@@ -117,6 +117,14 @@ export const upiApi = {
     api.get(`/upi/directory/contacts${phone ? '?phone=' + encodeURIComponent(phone) : ''}`),
   resetPin: (data: { email: string; cardLast6: string; expiry: string; otp: string; newMpin: string }) =>
     api.post('/upi/reset-pin', data),
+  getPendingCollect: (payerVpa: string) => 
+    api.get(`/upi/collect/pending?payerVpa=${encodeURIComponent(payerVpa)}`),
+  initiateCollect: (data: { requesterVpa: string; requesterName?: string; payerVpa: string; amount: number; note?: string; validityMinutes?: number }) =>
+    api.post('/upi/collect/initiate', data),
+  approveCollect: (data: { collectId: string; payerEmail: string; mpin: string }) =>
+    api.post('/upi/collect/approve', data),
+  declineCollect: (data: { collectId: string; reason?: string }) =>
+    api.post('/upi/collect/decline', data),
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };
