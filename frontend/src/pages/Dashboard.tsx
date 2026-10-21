@@ -15,6 +15,7 @@ import { SoundboxTester } from '../components/SoundboxTester';
 import { playKyroPaySoundbox } from '../utils/soundbox';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { BankEmployeePortal } from '../components/BankEmployeePortal';
+import { NpciCommonLibraryModal } from '../components/NpciCommonLibraryModal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -280,12 +281,13 @@ const SmartPayForm = ({
         setShowMpin(true);
     };
 
-    const executePayment = async () => {
+    const executePayment = async (customPin?: string) => {
+        const pinToUse = customPin || enteredMpin;
         setLoading(true);
         setStatus(null);
         try {
             const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user';
-            const res = await upiApi.sendOptimized(email, vpa, Number(amount), enteredMpin);
+            const res = await upiApi.sendOptimized(email, vpa, Number(amount), pinToUse);
             setShowMpin(false);
             setStatus(Number(amount) > 2000 ? 'SPLIT_SUCCESS' : 'SUCCESS');
             setLocalToast({ msg: `Payment of ₹${amount} successful!`, type: 'success' });
@@ -487,28 +489,16 @@ const SmartPayForm = ({
             </div>
         )}
 
-        {showMpin && (
-            <div className="fixed inset-0 bg-slate-900/90 z-50 flex flex-col items-center justify-center p-4">
-                <div className="bg-slate-800 rounded-2xl w-full max-w-sm p-6 text-white shadow-2xl border border-slate-700">
-                    <div className="flex justify-between items-center mb-6">
-                        <span className="text-slate-400 font-bold cursor-pointer hover:text-white" onClick={() => setShowMpin(false)}>CANCEL</span>
-                        <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-emerald-500 rounded-sm"></div>
-                            <span className="font-bold text-sm tracking-widest">NPCI</span>
-                        </div>
-                    </div>
-                    <div className="text-center mb-6">
-                        <p className="text-slate-400 text-sm mb-1">{verifiedName || vpa}</p>
-                        <p className="text-3xl font-bold">₹{amount}</p>
-                    </div>
-                    <div className="bg-slate-900 rounded-xl p-4 mb-6 text-center border border-slate-700">
-                        <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">ENTER 6-DIGIT UPI PIN</p>
-                        <input autoFocus required type="password" maxLength={6} pattern="[0-9]{6}" value={enteredMpin} onChange={e => setEnteredMpin(e.target.value)} placeholder="------" className="w-full bg-transparent text-center tracking-[1em] text-3xl font-bold outline-none text-white placeholder-slate-600" />
-                    </div>
-                    <button type="button" onClick={executePayment} disabled={loading || enteredMpin.length !== 6} className={`w-full ${loading || enteredMpin.length !== 6 ? 'bg-emerald-800 text-white/50 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-500 text-white'} font-bold py-4 rounded-xl flex justify-center items-center gap-2 text-lg transition-colors`}>{loading ? <><div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> Verifying...</> : <><CheckCircle2 size={24} /> Submit</>}</button>
-                </div>
-            </div>
-        )}
+        <NpciCommonLibraryModal
+          isOpen={showMpin}
+          onClose={() => setShowMpin(false)}
+          onSubmitPin={(pin) => executePayment(pin)}
+          payeeName={verifiedName || undefined}
+          payeeVpa={vpa}
+          amount={Number(amount)}
+          userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'demo_user'}
+          isLoading={loading}
+        />
       </div>
     );
 };

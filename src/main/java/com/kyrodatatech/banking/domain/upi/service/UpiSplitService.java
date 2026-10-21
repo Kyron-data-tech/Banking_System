@@ -50,6 +50,23 @@ public class UpiSplitService {
     }
 
     @Transactional
+    public void resetMpin(String email, String cardLast6, String expiry, String otp, String newMpin) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User account not found for: " + email));
+
+        if (cardLast6 == null || !cardLast6.matches("\\d{6}")) {
+            throw new RuntimeException("Debit Card verification failed: Must provide valid last 6 digits");
+        }
+        if (newMpin == null || !newMpin.matches("\\d{6}")) {
+            throw new RuntimeException("Invalid UPI PIN format: Must be exactly 6 numeric digits");
+        }
+
+        user.setMpin(newMpin);
+        userRepository.save(user);
+        log.info("NPCI Switch: UPI PIN successfully reset for user: {}", email);
+    }
+
+    @Transactional
     public UpiParentTransaction initiateOptimizedTransfer(String senderId, String receiverId, BigDecimal totalAmount, String mpin) {
         
         // 1. Verify MPIN

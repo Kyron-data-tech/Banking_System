@@ -32,6 +32,25 @@ public class UpiController {
         }
     }
 
+    @PostMapping("/reset-pin")
+    public ResponseEntity<?> resetPin(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String cardLast6 = request.get("cardLast6");
+        String expiry = request.get("expiry");
+        String otp = request.get("otp");
+        String newMpin = request.get("newMpin");
+
+        try {
+            upiSplitService.resetMpin(email, cardLast6, expiry, otp, newMpin);
+            return ResponseEntity.ok(Map.of(
+                "message", "UPI PIN updated successfully via NPCI Banking Switch",
+                "success", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/me")
     public ResponseEntity<?> getMyUpiDetails(@RequestParam String email) {
         User user = userRepository.findByEmail(email).orElse(null);

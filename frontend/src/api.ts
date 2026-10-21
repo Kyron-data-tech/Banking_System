@@ -115,6 +115,8 @@ export const upiApi = {
     api.post('/upi/settle', { merchantId, amount, mpin, bankAccount, ifsc }),
   getDirectoryContacts: (phone?: string) => 
     api.get(`/upi/directory/contacts${phone ? '?phone=' + encodeURIComponent(phone) : ''}`),
+  resetPin: (data: { email: string; cardLast6: string; expiry: string; otp: string; newMpin: string }) =>
+    api.post('/upi/reset-pin', data),
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };
