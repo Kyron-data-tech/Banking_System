@@ -16,6 +16,7 @@ import { playKyroPaySoundbox } from '../utils/soundbox';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { BankEmployeePortal } from '../components/BankEmployeePortal';
 import { NpciCommonLibraryModal } from '../components/NpciCommonLibraryModal';
+import { DeviceBindingModal } from '../components/DeviceBindingModal';
 import { UserButton, useUser, useClerk } from '@clerk/clerk-react';
 import React, { useEffect, useState } from 'react';
 import {
@@ -39,22 +40,6 @@ const Toast = ({ message, type, onClose }: any) => {
         {type === 'success' ? <CheckCircle2 size={20} /> : type === 'error' ? <AlertTriangle size={20} /> : <Activity size={20} />}
         <span className="font-medium text-sm">{message}</span>
         <button onClick={onClose} className="ml-2 text-white/70 hover:text-white"><X size={16} /></button>
-      </div>
-    </div>
-  );
-};
-
-const Modal = ({ isOpen, onClose, title, children }: any) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in-up">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="font-bold text-base text-slate-800">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1"><X size={20} /></button>
-        </div>
-        <div className="p-6">{children}</div>
       </div>
     </div>
   );
@@ -686,23 +671,6 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
     const [balanceVisible, setBalanceVisible] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
     const [showBalanceModal, setShowBalanceModal] = useState(false);
-    const [balanceMpin, setBalanceMpin] = useState('');
-    const [balanceError, setBalanceError] = useState('');
-
-    const handleCheckBalance = () => {
-        if (!balanceMpin || balanceMpin.length !== 6) {
-            setBalanceError('Please enter a valid 6-digit MPIN');
-            return;
-        }
-        setCheckingBalance(true);
-        setBalanceError('');
-        setTimeout(() => {
-            setCheckingBalance(false);
-            setShowBalanceModal(false);
-            setBalanceVisible(true);
-            setBalanceMpin('');
-        }, 1500); // simulate network verification
-    };
 
     const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
     const [showStatementModal, setShowStatementModal] = useState<boolean>(false);
@@ -711,6 +679,9 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
     const [razorpayTargetVpa, setRazorpayTargetVpa] = useState<string>('');
     const [razorpayTargetName, setRazorpayTargetName] = useState<string>('');
     const [razorpayAmount, setRazorpayAmount] = useState<number>(500);
+    const [showDeviceBinding, setShowDeviceBinding] = useState<boolean>(false);
+    const [showSecurityKeypadDemo, setShowSecurityKeypadDemo] = useState<boolean>(false);
+    const [upiLiteBalance, setUpiLiteBalance] = useState<number>(1850);
 
   const { user } = useUser();
   const { user: backendUser } = useAuth();
@@ -814,6 +785,32 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
 
+          {/* NPCI UPI 2.0 HARDWARE & DEVICE TRUST RIBBON */}
+          <div 
+            onClick={() => setShowDeviceBinding(true)}
+            className="mb-4 bg-slate-900/90 dark:bg-slate-800/90 hover:bg-slate-900 border border-slate-700/80 rounded-2xl p-3 text-white flex items-center justify-between shadow-md cursor-pointer transition active:scale-[0.99] group"
+          >
+            <div className="flex items-center gap-2.5 truncate">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
+                <Smartphone size={16} />
+              </div>
+              <div className="truncate">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black text-emerald-400 tracking-wider uppercase">NPCI Hardware Enclave</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">SIM 1 Airtel 5G</span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-200 truncate mt-0.5">
+                  Bound Device: Pixel 8 Pro • 256-Bit Hardware Key Active
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-blue-400 font-bold bg-blue-500/10 px-2 py-1 rounded-xl border border-blue-500/20 shrink-0 group-hover:bg-blue-500/20 transition">
+              <ShieldCheck size={12} />
+              <span>Verified SIM</span>
+            </div>
+          </div>
+
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-6 text-white shadow-xl mb-5 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-400/20 rounded-full blur-xl transform -translate-x-5 translate-y-5" />
@@ -874,6 +871,51 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
               >
                 <Plus size={14} className="text-emerald-300" /> Add Money (Bank)
               </button>
+            </div>
+          </div>
+
+          {/* KYRO UPI LITE ZERO-PIN WALLET (<₹500 INSTANT ON-DEVICE RAIL) */}
+          <div className="bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border border-emerald-500/30 rounded-3xl p-4 mb-5 text-white shadow-lg relative overflow-hidden">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 font-black text-sm">
+                  ⚡
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-xs text-white">Kyro UPI Lite</span>
+                    <span className="text-[9px] bg-emerald-400 text-slate-950 font-black px-1.5 py-0.2 rounded-full uppercase">0% MDR</span>
+                    <span className="text-[9px] bg-white/10 text-emerald-300 font-mono px-1.5 py-0.2 rounded">Zero-PIN</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Instant 200ms payments up to ₹500 without entering MPIN</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] text-slate-400 font-semibold uppercase">Lite Balance</span>
+                <p className="text-sm font-black text-emerald-400 font-mono">₹{upiLiteBalance.toLocaleString('en-IN')}.00</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-2.5 border-t border-slate-800 text-[11px]">
+              <span className="text-slate-400 flex items-center gap-1 text-[10px]">
+                <CheckCircle2 size={12} className="text-emerald-400" />
+                NPCI Offline CBS Active
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setUpiLiteBalance(prev => prev + 500)}
+                  className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold px-2.5 py-1 rounded-lg border border-emerald-500/40 transition active:scale-95 text-xs"
+                >
+                  +₹500 Top-up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSecurityKeypadDemo(true)}
+                  className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-2.5 py-1 rounded-lg border border-slate-700 transition active:scale-95 text-xs flex items-center gap-1"
+                >
+                  <ShieldCheck size={12} className="text-blue-400" /> Test NPCI Keypad
+                </button>
+              </div>
             </div>
           </div>
 
@@ -985,39 +1027,27 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
             </div>
           </div>
           
-          <Modal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} title="Check Bank Balance">
-            <div className="text-center">
-               <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                 <ShieldCheck size={32} />
-               </div>
-               <h3 className="font-bold text-slate-800 text-lg mb-2">Enter UPI PIN</h3>
-               <p className="text-slate-500 text-sm mb-6">Enter your 6-digit MPIN to securely view your account balance.</p>
-               
-               {balanceError && <p className="text-red-500 text-sm mb-4 bg-red-50 p-2 rounded-lg">{balanceError}</p>}
-               
-               <input 
-                 type="password" 
-                 maxLength={6} 
-                 pattern="[0-9]{6}" 
-                 value={balanceMpin} 
-                 onChange={e => setBalanceMpin(e.target.value)} 
-                 placeholder="------" 
-                 className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-center tracking-[1em] text-2xl font-bold outline-none mb-6 focus:ring-2 focus:ring-blue-500" 
-               />
-               
-               <button 
-                 onClick={handleCheckBalance} 
-                 disabled={checkingBalance || balanceMpin.length !== 6} 
-                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-md disabled:opacity-70"
-               >
-                 {checkingBalance ? (
-                    <><Activity className="animate-spin" size={20} /> Verifying PIN...</>
-                 ) : (
-                    'Verify & Check Balance'
-                 )}
-               </button>
-            </div>
-          </Modal>
+          {/* NPCI COMMON LIBRARY MODAL FOR BALANCE INQUIRY */}
+          <NpciCommonLibraryModal
+            isOpen={showBalanceModal}
+            onClose={() => setShowBalanceModal(false)}
+            onSubmitPin={(_pin) => {
+              setCheckingBalance(true);
+              setTimeout(() => {
+                setCheckingBalance(false);
+                setShowBalanceModal(false);
+                setBalanceVisible(true);
+                playKyroPaySoundbox(currentBalance, 'en');
+              }, 1200);
+            }}
+            payeeName="NPCI Core Banking Balance Inquiry"
+            payeeVpa="cbs://balance-inquiry"
+            amount={0}
+            userEmail={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'demo_user'}
+            bankName="HDFC Bank"
+            accountNumber="•••• 4129"
+            isLoading={checkingBalance}
+          />
 
           {/* KYROPAY DIRECT REAL BANK SWITCH (PERSONAL) */}
           <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white rounded-3xl p-5 mb-6 border border-blue-500/30 shadow-xl relative overflow-hidden">
@@ -1300,6 +1330,30 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
         userName={user?.fullName || backendUser?.fullName || 'Demo Consumer'}
         onAccountLinked={handleAccountLinked}
       />
+
+      {/* Device & SIM Binding Modal */}
+      <DeviceBindingModal
+        isOpen={showDeviceBinding}
+        onClose={() => setShowDeviceBinding(false)}
+        userPhone={user?.primaryPhoneNumber?.phoneNumber || (backendUser as any)?.phoneNumber || '+91 98765 43210'}
+        userVpa={verifiedUpiId || 'user@okkyro'}
+      />
+
+      {/* Standalone NPCI Common Library Security Keypad Demo */}
+      <NpciCommonLibraryModal
+        isOpen={showSecurityKeypadDemo}
+        onClose={() => setShowSecurityKeypadDemo(false)}
+        onSubmitPin={(_pin) => {
+          setShowSecurityKeypadDemo(false);
+          playKyroPaySoundbox(500, 'en');
+        }}
+        payeeName="NPCI Common Library Test Terminal"
+        payeeVpa="npci://security-test"
+        amount={500}
+        userEmail={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'demo_user'}
+        bankName="HDFC Bank"
+        accountNumber="•••• 4129"
+      />
     </MobileDashboardLayout>
   );
 };
@@ -1319,6 +1373,8 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
     const [razorpayTargetVpa, setRazorpayTargetVpa] = useState<string>('');
     const [razorpayTargetName, setRazorpayTargetName] = useState<string>('');
     const [razorpayAmount, setRazorpayAmount] = useState<number>(500);
+    const [showDeviceBinding, setShowDeviceBinding] = useState<boolean>(false);
+    const [showSecurityKeypadDemo, setShowSecurityKeypadDemo] = useState<boolean>(false);
 
     const { user } = useUser();
     const { user: backendUser } = useAuth();
@@ -1326,23 +1382,6 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
     const [balanceVisible, setBalanceVisible] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
     const [showBalanceModal, setShowBalanceModal] = useState(false);
-    const [balanceMpin, setBalanceMpin] = useState('');
-    const [balanceError, setBalanceError] = useState('');
-
-    const handleCheckBalance = () => {
-        if (!balanceMpin || balanceMpin.length !== 6) {
-            setBalanceError('Please enter a valid 6-digit MPIN');
-            return;
-        }
-        setCheckingBalance(true);
-        setBalanceError('');
-        setTimeout(() => {
-            setCheckingBalance(false);
-            setShowBalanceModal(false);
-            setBalanceVisible(true);
-            setBalanceMpin('');
-        }, 1500);
-    };
 
     useEffect(() => {
         setBalanceVisible(false);
@@ -1437,6 +1476,32 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
       >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
+
+          {/* NPCI UPI 2.0 HARDWARE & DEVICE TRUST RIBBON (MERCHANT) */}
+          <div 
+            onClick={() => setShowDeviceBinding(true)}
+            className="mb-4 bg-slate-900/90 dark:bg-slate-800/90 hover:bg-slate-900 border border-slate-700/80 rounded-2xl p-3 text-white flex items-center justify-between shadow-md cursor-pointer transition active:scale-[0.99] group"
+          >
+            <div className="flex items-center gap-2.5 truncate">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shrink-0">
+                <Smartphone size={16} />
+              </div>
+              <div className="truncate">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black text-indigo-400 tracking-wider uppercase">NPCI Merchant Terminal</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">POS Hardware Active</span>
+                </div>
+                <p className="text-[11px] font-bold text-slate-200 truncate mt-0.5">
+                  Encrypted Terminal: Merchant VPA Verified • 256-Bit Hardware Enclave
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-indigo-400 font-bold bg-indigo-500/10 px-2 py-1 rounded-xl border border-indigo-500/20 shrink-0 group-hover:bg-indigo-500/20 transition">
+              <ShieldCheck size={12} />
+              <span>Bound SIM</span>
+            </div>
+          </div>
 
           <div className="bg-gradient-to-br from-indigo-700 to-purple-800 rounded-3xl p-6 text-white shadow-2xl mb-4 relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
@@ -1561,39 +1626,27 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
               </div>
             </div>
 
-            <Modal isOpen={showBalanceModal} onClose={() => setShowBalanceModal(false)} title="Verify Merchant PIN">
-              <div className="text-center">
-                 <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <ShieldCheck size={32} />
-                 </div>
-                 <h3 className="font-bold text-slate-800 text-lg mb-2">Enter UPI PIN</h3>
-                 <p className="text-slate-500 text-sm mb-6">Enter your 6-digit MPIN to securely view your total collections.</p>
-                 
-                 {balanceError && <p className="text-red-500 text-sm mb-4 bg-red-50 p-2 rounded-lg">{balanceError}</p>}
-                 
-                 <input 
-                   type="password" 
-                   maxLength={6} 
-                   pattern="[0-9]{6}" 
-                   value={balanceMpin} 
-                   onChange={e => setBalanceMpin(e.target.value)} 
-                   placeholder="------" 
-                   className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-center tracking-[1em] text-2xl font-bold outline-none mb-6 focus:ring-2 focus:ring-indigo-500" 
-                 />
-                 
-                 <button 
-                   onClick={handleCheckBalance} 
-                   disabled={checkingBalance || balanceMpin.length !== 6} 
-                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-md disabled:opacity-70"
-                 >
-                   {checkingBalance ? (
-                      <><Activity className="animate-spin" size={20} /> Verifying PIN...</>
-                   ) : (
-                      'Verify & View Collections'
-                   )}
-                 </button>
-              </div>
-            </Modal>
+            {/* NPCI COMMON LIBRARY MODAL FOR MERCHANT BALANCE & COLLECTIONS INQUIRY */}
+            <NpciCommonLibraryModal
+              isOpen={showBalanceModal}
+              onClose={() => setShowBalanceModal(false)}
+              onSubmitPin={(_pin) => {
+                setCheckingBalance(true);
+                setTimeout(() => {
+                  setCheckingBalance(false);
+                  setShowBalanceModal(false);
+                  setBalanceVisible(true);
+                  playKyroPaySoundbox(totalCollections, 'en');
+                }, 1200);
+              }}
+              payeeName="Merchant Settlements & Collections Inquiry"
+              payeeVpa="cbs://merchant-collections"
+              amount={0}
+              userEmail={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'}
+              bankName="HDFC Bank"
+              accountNumber="•••• 8821"
+              isLoading={checkingBalance}
+            />
 
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
               <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
@@ -1837,6 +1890,30 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         onClose={() => setShowLinkBankModal(false)}
         userName={user?.fullName || backendUser?.fullName || 'Kyro Business Merchant'}
         onAccountLinked={handleAccountLinked}
+      />
+
+      {/* Device & SIM Binding Modal (Merchant) */}
+      <DeviceBindingModal
+        isOpen={showDeviceBinding}
+        onClose={() => setShowDeviceBinding(false)}
+        userPhone={user?.primaryPhoneNumber?.phoneNumber || (backendUser as any)?.phoneNumber || '+91 98765 43210'}
+        userVpa={verifiedUpiId || 'merchant@okkyro'}
+      />
+
+      {/* Standalone NPCI Common Library Security Keypad Demo (Merchant) */}
+      <NpciCommonLibraryModal
+        isOpen={showSecurityKeypadDemo}
+        onClose={() => setShowSecurityKeypadDemo(false)}
+        onSubmitPin={(_pin) => {
+          setShowSecurityKeypadDemo(false);
+          playKyroPaySoundbox(500, 'en');
+        }}
+        payeeName="NPCI Merchant Terminal Test"
+        payeeVpa="npci://merchant-test"
+        amount={500}
+        userEmail={user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant@kyro'}
+        bankName="HDFC Bank"
+        accountNumber="•••• 8821"
       />
     </MobileDashboardLayout>
     </>
