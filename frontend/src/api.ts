@@ -119,12 +119,16 @@ export const upiApi = {
     api.post('/upi/reset-pin', data),
   getPendingCollect: (payerVpa: string) => 
     api.get(`/upi/collect/pending?payerVpa=${encodeURIComponent(payerVpa)}`),
+  getSentCollect: (requesterVpa: string) => 
+    api.get(`/upi/collect/sent?requesterVpa=${encodeURIComponent(requesterVpa)}`),
   initiateCollect: (data: { requesterVpa: string; requesterName?: string; payerVpa: string; amount: number; note?: string; validityMinutes?: number }) =>
     api.post('/upi/collect/initiate', data),
   approveCollect: (data: { collectId: string; payerEmail: string; mpin: string }) =>
     api.post('/upi/collect/approve', data),
   declineCollect: (data: { collectId: string; reason?: string }) =>
     api.post('/upi/collect/decline', data),
+  cancelCollect: (data: { collectId: string }) =>
+    api.post('/upi/collect/cancel', data),
 };
 
 export const paymentApi = { initiate: (type: string, payload: any) => api.post('/payments/initiate', { type, ...payload }) };

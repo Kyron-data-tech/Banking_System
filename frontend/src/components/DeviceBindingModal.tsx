@@ -36,6 +36,10 @@ export const DeviceBindingModal: React.FC<DeviceBindingModalProps> = ({
         setBindingStep('CRYPTO_KEY');
         setTimeout(() => {
           setBindingStep('SUCCESS');
+          try {
+            localStorage.setItem('kyro_bound_sim', selectedSim === 'SIM1' ? 'SIM 1 Airtel 5G' : 'SIM 2 Jio 5G');
+            localStorage.setItem('kyro_device_binding_active', 'true');
+          } catch (e) {}
         }, 1200);
       }, 1200);
     }, 1200);

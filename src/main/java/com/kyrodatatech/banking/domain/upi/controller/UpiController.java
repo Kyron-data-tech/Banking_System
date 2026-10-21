@@ -233,22 +233,41 @@ public class UpiController {
                 .filter(r -> "PENDING".equals(r.getStatus()) && r.getExpiresAt().isAfter(now))
                 .toList();
 
-        if (active.isEmpty()) {
-            UpiCollectRequest demo = UpiCollectRequest.builder()
-                    .requesterVpa("swiggy@icici")
-                    .requesterName("Swiggy Delivery")
-                    .payerVpa(payerVpa)
-                    .amount(new BigDecimal("450.00"))
-                    .note("Order #SWG-84920 Dinner Delivery")
-                    .status("PENDING")
-                    .expiresAt(now.plusMinutes(10))
-                    .createdAt(now)
-                    .build();
-            upiCollectRequestRepository.save(demo);
-            active = List.of(demo);
+        return ResponseEntity.ok(active);
+    }
+
+    @GetMapping("/collect/sent")
+    public ResponseEntity<?> getSentCollectRequests(@RequestParam String requesterVpa) {
+        LocalDateTime now = LocalDateTime.now();
+        List<UpiCollectRequest> list = upiCollectRequestRepository.findByRequesterVpaIgnoreCaseOrderByCreatedAtDesc(requesterVpa);
+
+        for (UpiCollectRequest req : list) {
+            if ("PENDING".equals(req.getStatus()) && req.getExpiresAt().isBefore(now)) {
+                req.setStatus("EXPIRED");
+                upiCollectRequestRepository.save(req);
+            }
         }
 
-        return ResponseEntity.ok(active);
+        return ResponseEntity.ok(list);
+    }
+
+    @PostMapping("/collect/cancel")
+    public ResponseEntity<?> cancelCollectRequest(@RequestBody Map<String, Object> request) {
+        String collectId = (String) request.get("collectId");
+        UpiCollectRequest col = upiCollectRequestRepository.findById(UUID.fromString(collectId))
+                .orElseThrow(() -> new RuntimeException("Collect request not found"));
+
+        if (!"PENDING".equalsIgnoreCase(col.getStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Only pending requests can be cancelled. Current status: " + col.getStatus()));
+        }
+
+        col.setStatus("CANCELLED");
+        upiCollectRequestRepository.save(col);
+
+        return ResponseEntity.ok(Map.of(
+            "message", "Collect request cancelled successfully",
+            "collectRequest", col
+        ));
     }
 
     @PostMapping("/collect/approve")

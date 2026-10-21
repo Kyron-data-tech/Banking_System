@@ -25,7 +25,7 @@ import {
   LogOut, Layers, Bot,
   TrendingUp, AlertTriangle, CheckCircle2,
   X, Plus, QrCode, Bell,
-  Receipt, FileSpreadsheet, Building2, ArrowDownToLine,
+  Receipt, FileSpreadsheet, Building2, ArrowDownToLine, ArrowDownLeft,
   Gift, Volume2, Smartphone, Send, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -582,7 +582,11 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
             <Users size={18} /> <span className="font-medium text-xs">Verified Contacts</span>
           </div>
 
-          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/10 text-amber-400 hover:text-amber-300 font-bold`} onClick={() => onOpenCollect ? onOpenCollect() : setActiveTab('pay')}>
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/10 text-indigo-300 hover:text-indigo-200 font-bold`} onClick={() => onOpenCollect ? onOpenCollect('CREATE') : setActiveTab('pay')}>
+            <Send size={18} /> <span className="font-medium text-xs">Request Money (Collect)</span>
+          </div>
+
+          <div className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/10 text-amber-400 hover:text-amber-300 font-bold`} onClick={() => onOpenCollect ? onOpenCollect('INBOX') : setActiveTab('pay')}>
             <Bell size={18} className="animate-pulse" /> <span className="font-medium text-xs">UPI Collect Demands</span>
           </div>
 
@@ -659,7 +663,16 @@ const MobileDashboardLayout = ({ title, upiId, children, activeTab, setActiveTab
 
             <button
               type="button"
-              onClick={() => onOpenCollect ? onOpenCollect() : setActiveTab('pay')}
+              onClick={() => onOpenCollect ? onOpenCollect('CREATE') : setActiveTab('pay')}
+              className="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
+            >
+              <Send size={13} />
+              <span>Request Money</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenCollect ? onOpenCollect('INBOX') : setActiveTab('pay')}
               className="px-3 py-1.5 rounded-full text-xs font-bold shrink-0 transition flex items-center gap-1.5 bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
             >
               <Bell size={13} className="animate-pulse" />
@@ -805,6 +818,7 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
     const [showSecurityKeypadDemo, setShowSecurityKeypadDemo] = useState<boolean>(false);
     const [upiLiteBalance, setUpiLiteBalance] = useState<number>(1850);
     const [showCollectModal, setShowCollectModal] = useState<boolean>(false);
+    const [collectInitialTab, setCollectInitialTab] = useState<'INBOX' | 'SENT' | 'CREATE'>('INBOX');
     const [pendingCollectDemands, setPendingCollectDemands] = useState<any[]>([]);
 
   const { user } = useUser();
@@ -921,7 +935,10 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
       activeTab={activeTab} 
       setActiveTab={setActiveTab}
       onOpenScanner={() => setShowScanner(true)}
-      onOpenCollect={() => setShowCollectModal(true)}
+      onOpenCollect={(tab: 'INBOX' | 'SENT' | 'CREATE' = 'INBOX') => {
+        setCollectInitialTab(tab);
+        setShowCollectModal(true);
+      }}
     >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
@@ -939,7 +956,9 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-black text-emerald-400 tracking-wider uppercase">NPCI Hardware Enclave</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">SIM 1 Airtel 5G</span>
+                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">
+                    {localStorage.getItem('kyro_bound_sim') || 'SIM 1 Airtel 5G'}
+                  </span>
                 </div>
                 <p className="text-[11px] font-bold text-slate-200 truncate mt-0.5">
                   Bound Device: Pixel 8 Pro • 256-Bit Hardware Key Active
@@ -955,7 +974,10 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
           {/* NPCI UPI 2.0 PULL PAYMENT / INCOMING COLLECT DEMANDS BANNER */}
           {pendingCollectDemands.length > 0 && (
             <div 
-              onClick={() => setShowCollectModal(true)}
+              onClick={() => {
+                setCollectInitialTab('INBOX');
+                setShowCollectModal(true);
+              }}
               className="mb-4 bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/50 dark:border-amber-400/40 rounded-2xl p-3.5 text-slate-800 dark:text-white flex items-center justify-between shadow-md cursor-pointer transition active:scale-[0.99] group hover:border-amber-500"
             >
               <div className="flex items-center gap-3">
@@ -980,6 +1002,7 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  setCollectInitialTab('INBOX');
                   setShowCollectModal(true);
                 }}
                 className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black rounded-xl shadow-sm hover:brightness-105 transition active:scale-95"
@@ -1131,7 +1154,24 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
                 </span>
               </button>
 
-              {/* 3. To Bank A/C */}
+              {/* 3. Request Money (UPI Collect) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCollectInitialTab('CREATE');
+                  setShowCollectModal(true);
+                }}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group cursor-pointer"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-orange-500/20 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-300/80 dark:border-amber-800 group-hover:scale-105 transition shadow-sm">
+                  <ArrowDownLeft size={22} className="animate-pulse" />
+                </div>
+                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">
+                  Request Money
+                </span>
+              </button>
+
+              {/* 4. To Bank A/C */}
               <button
                 type="button"
                 onClick={() => {
@@ -1148,24 +1188,19 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
                   To Bank
                 </span>
               </button>
-
-              {/* 4. My QR Code */}
-              <button
-                type="button"
-                onClick={() => setActiveTab('my-qr')}
-                className="flex flex-col items-center gap-1.5 p-2 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition group cursor-pointer"
-              >
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-slate-700 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-100 dark:border-slate-600 group-hover:scale-105 transition">
-                  <QrCode size={22} />
-                </div>
-                <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">
-                  My QR
-                </span>
-              </button>
             </div>
 
             {/* Quick Services Row */}
-            <div className="grid grid-cols-4 gap-2 text-center mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+            <div className="grid grid-cols-5 gap-1.5 text-center mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
+              <button
+                type="button"
+                onClick={() => setActiveTab('my-qr')}
+                className="flex flex-col items-center gap-1 p-1 hover:text-purple-600 transition cursor-pointer"
+              >
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                  📱 My QR
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('banks')}
@@ -1177,20 +1212,23 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  setCollectInitialTab('INBOX');
+                  setShowCollectModal(true);
+                }}
+                className="flex flex-col items-center gap-1 p-1 hover:text-amber-500 transition cursor-pointer relative"
+              >
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  🔔 Demands {pendingCollectDemands.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>}
+                </span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('rewards')}
                 className="flex flex-col items-center gap-1 p-1 hover:text-amber-500 transition cursor-pointer"
               >
                 <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
                   🎁 Rewards
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('soundbox')}
-                className="flex flex-col items-center gap-1 p-1 hover:text-emerald-500 transition cursor-pointer"
-              >
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                  🔊 Soundbox
                 </span>
               </button>
               <button
@@ -1539,6 +1577,8 @@ const PhonePeDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: string
         onClose={() => setShowCollectModal(false)}
         userVpa={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'user').split('@')[0] + '@okkyro'}
         userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'user@kyro'}
+        initialTab={collectInitialTab}
+        linkedBanks={linkedBanks}
         onPaymentSuccess={(createdTx) => {
           setRefresh(r => r + 1);
           if (createdTx) {
@@ -1569,6 +1609,8 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
     const [showDeviceBinding, setShowDeviceBinding] = useState<boolean>(false);
     const [showSecurityKeypadDemo, setShowSecurityKeypadDemo] = useState<boolean>(false);
     const [showCollectModal, setShowCollectModal] = useState<boolean>(false);
+    const [collectInitialTab, setCollectInitialTab] = useState<'INBOX' | 'SENT' | 'CREATE'>('INBOX');
+    const [pendingCollectDemands, setPendingCollectDemands] = useState<any[]>([]);
 
     const { user } = useUser();
     const { user: backendUser } = useAuth();
@@ -1654,10 +1696,26 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         });
     };
 
+    const fetchCollectRequests = () => {
+      const email = backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyropay.com';
+      const upiId = verifiedUpiId || (email.split('@')[0] + '@okkyro');
+      upiApi.getPendingCollect(upiId)
+        .then(res => {
+          if (Array.isArray(res.data)) {
+            setPendingCollectDemands(res.data);
+          }
+        })
+        .catch(() => {});
+    };
+
     fetchHistory();
-    const interval = setInterval(fetchHistory, 3000);
+    fetchCollectRequests();
+    const interval = setInterval(() => {
+      fetchHistory();
+      fetchCollectRequests();
+    }, 3000);
     return () => clearInterval(interval);
-  }, [refresh, backendUser, user]);
+  }, [refresh, backendUser, user, verifiedUpiId]);
 
   return (
     <>{incomingToast && (<div className="absolute top-4 left-4 right-4 bg-emerald-500 text-white p-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce"><div className="w-10 h-10 bg-white text-emerald-600 rounded-full flex items-center justify-center font-bold text-xl">₹</div><div><p className="font-bold">KyroPay Soundbox</p><p className="text-sm">Received ₹{incomingToast.amount} from {incomingToast.sender}</p></div></div>)}
@@ -1667,7 +1725,10 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
         onOpenScanner={() => setShowScanner(true)}
-        onOpenCollect={() => setShowCollectModal(true)}
+        onOpenCollect={(tab: 'INBOX' | 'SENT' | 'CREATE' = 'INBOX') => {
+          setCollectInitialTab(tab);
+          setShowCollectModal(true);
+        }}
       >
       {activeTab === 'pay' && (
         <div className="animate-fade-in">
@@ -1685,7 +1746,9 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-black text-indigo-400 tracking-wider uppercase">NPCI Merchant Terminal</span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">POS Hardware Active</span>
+                  <span className="text-[9px] bg-slate-800 text-slate-300 font-mono px-1.5 py-0.2 rounded border border-slate-700">
+                    {localStorage.getItem('kyro_bound_sim') || 'POS Hardware SIM 1'}
+                  </span>
                 </div>
                 <p className="text-[11px] font-bold text-slate-200 truncate mt-0.5">
                   Encrypted Terminal: Merchant VPA Verified • 256-Bit Hardware Enclave
@@ -1697,6 +1760,47 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
               <span>Bound SIM</span>
             </div>
           </div>
+
+          {/* NPCI UPI 2.0 PULL PAYMENT / INCOMING COLLECT DEMANDS BANNER (MERCHANT) */}
+          {pendingCollectDemands.length > 0 && (
+            <div 
+              onClick={() => {
+                setCollectInitialTab('INBOX');
+                setShowCollectModal(true);
+              }}
+              className="mb-4 bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/50 dark:border-amber-400/40 rounded-2xl p-3.5 text-slate-800 dark:text-white flex items-center justify-between shadow-md cursor-pointer transition active:scale-[0.99] group hover:border-amber-500"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm group-hover:scale-105 transition">
+                  <Bell size={18} className="animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Payment Demand Pending ({pendingCollectDemands.length})
+                    </span>
+                    <span className="text-[9px] bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-bold px-1.5 py-0.2 rounded-full border border-red-200 dark:border-red-800">
+                      NPCI UPI 2.0 Pull
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold mt-0.5 text-slate-800 dark:text-slate-100">
+                    {pendingCollectDemands[0].requesterName || pendingCollectDemands[0].requesterVpa} requested ₹{Number(pendingCollectDemands[0].amount).toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCollectInitialTab('INBOX');
+                  setShowCollectModal(true);
+                }}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-black rounded-xl shadow-sm hover:brightness-105 transition active:scale-95"
+              >
+                Review & Pay
+              </button>
+            </div>
+          )}
 
           <div className="bg-gradient-to-br from-indigo-700 to-purple-800 rounded-3xl p-6 text-white shadow-2xl mb-4 relative overflow-hidden">
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
@@ -1751,16 +1855,26 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
                 type="button"
                 onClick={() => setShowSettlementModal(true)}
                 disabled={effectiveUnsettled <= 0}
-                className="flex-1 py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+                className="flex-1 py-3.5 px-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
               >
-                <ArrowDownToLine size={16} /> Settle ₹{effectiveUnsettled.toLocaleString('en-IN')} to Bank
+                <ArrowDownToLine size={15} /> Settle ₹{effectiveUnsettled.toLocaleString('en-IN')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCollectInitialTab('CREATE');
+                  setShowCollectModal(true);
+                }}
+                className="py-3.5 px-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-2xl shadow-sm transition flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              >
+                <Send size={15} /> Request Bill
               </button>
               <button
                 type="button"
                 onClick={() => setShowStatementModal(true)}
-                className="py-3.5 px-4 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-2xl shadow-sm transition flex items-center gap-1.5 active:scale-95"
+                className="py-3.5 px-3.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 font-bold text-xs rounded-2xl shadow-sm transition flex items-center gap-1.5 active:scale-95"
               >
-                <FileSpreadsheet size={16} className="text-emerald-600" /> Statement
+                <FileSpreadsheet size={15} className="text-emerald-600" /> Statement
               </button>
             </div>
 
@@ -2117,6 +2231,8 @@ const MerchantDashboard = ({ verifiedUpiId, initialTab }: { verifiedUpiId: strin
         onClose={() => setShowCollectModal(false)}
         userVpa={verifiedUpiId || (user?.primaryEmailAddress?.emailAddress || backendUser?.email || 'merchant').split('@')[0] + '@okkyro'}
         userEmail={backendUser?.email || user?.primaryEmailAddress?.emailAddress || 'merchant@kyro'}
+        initialTab={collectInitialTab}
+        linkedBanks={linkedBanks}
         onPaymentSuccess={(createdTx) => {
           setRefresh(r => r + 1);
           if (createdTx) {
